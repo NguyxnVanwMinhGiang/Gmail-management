@@ -11,10 +11,10 @@ class AdminService:
     def list_admin(db: Session):
         return admin_repository.get_all_admin(db)
     
-    def create_account_admin(self, db: Session, data: AdminCreate, token: str):
+    def create_account_admin(db: Session, data: AdminCreate, token: str):
         admin_create = get_current_admin(token)
-        checkEmail = admin_repository.find_by_email(data.email)
-        if checkEmail == data.email:
+        checkEmail = admin_repository.find_by_email(db, data.email)
+        if checkEmail:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already exists"
@@ -25,7 +25,7 @@ class AdminService:
         admin_repository.create_admin(
             db=db,
             email=data.email,
-            password=hashed_password,
+            password_hash=hashed_password,
             full_name=data.full_name,
             permissions=data.permissions,
             created_by=admin_create
@@ -44,8 +44,8 @@ class AdminService:
             full_name=data.full_name,
             email=data.email,
             permissions=data.permissions,
-            is_active=True,
-            is_verified=False,
+            is_active=data.is_active,
+            is_verified=data.is_verified,
             updated_by=checkAdminCurrent
         )
 
@@ -69,5 +69,5 @@ class AdminService:
     def delete_account_admin(db: Session, admin_id: int):
         admin_repository.delete_admin(db=db, admin_id=admin_id)
         return {
-            "message: delete succesfuly"
+            "message": "delete successfully"
         }

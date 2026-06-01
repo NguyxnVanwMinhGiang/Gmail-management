@@ -1,11 +1,39 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Users, ShieldOff, Search, Edit } from "lucide-react";
+import { Users, ShieldOff, Search, Edit, LockKeyhole, RefreshCcw } from "lucide-react";
 import Button from "@mui/material/Button";
-import type { Admin } from "../api/adminApi";
-import { getAdmin } from "../api/adminApi";
+import { Box, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, FormGroup, Switch, TextField, Typography } from "@mui/material";
+import type { Admin, CreateAdminRequest } from "../api/adminApi";
+import { getAdmin, createAdmin, updateAdmin, deleteAdmin, changePassword } from "../api/adminApi";
 import StatusBadge from "../components/ui/StatusBadge";
 import CreateAdminDialog from "../components/ui/CreateAdminDialog";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import Alert from "../components/ui/Alert";
+
+const defaultPermissions = {
+  log: false,
+  data: false,
+  sale: false,
+  management: false,
+};
+
+type AlertState = {
+  open: boolean;
+  type: "success" | "error" | "warning" | "info";
+  message: string;
+};
+
+type EditMode = "profile" | "password";
+
+type AdminFormState = {
+  email: string;
+  full_name: string;
+  password: string;
+  confirmPassword: string;
+  permissions: Record<string, boolean>;
+  is_active: boolean;
+  is_verified: boolean;
+};
 
 
 export const Route = createFileRoute("/admin/administrator")({
@@ -17,43 +45,163 @@ function Administrator() {
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState<AlertState>({
+    open: false,
+    type: "info",
+    message: "",
+  });
 
-  const [isOpenCreate, setIsOpenCreate] = useState(false)
-  const [isOpenDelete, setIsOpenDelete] = useState(false)
-  const [isOpenEdit, setIsOpenEdit] = useState(false)
+  const [isOpenCreate, setIsOpenCreate] = useState(false);
+  const [isOpenEdit, setIsOpenEdit] = useState(false);
+  const [editMode, setEditMode] = useState<EditMode>("profile");
+  const [deleteTarget, setDeleteTarget] = useState<Admin | null>(null);
+  const [editingAdminId, setEditingAdminId] = useState<number | null>(null);
+  const [form, setForm] = useState<AdminFormState>({
+    email: "",
+    full_name: "",
+    password: "",
+    confirmPassword: "",
+    permissions: { ...defaultPermissions },
+    is_active: true,
+    is_verified: false,
+  });
+
+  function showAlert(type: AlertState["type"], message: string) {
+    setAlert({ open: true, type, message });
+  }
+
+  function closeEditDialog() {
+    setIsOpenEdit(false);
+    setEditMode("profile");
+    setEditingAdminId(null);
+    setForm({
+      email: "",
+      full_name: "",
+      password: "",
+      confirmPassword: "",
+      permissions: { ...defaultPermissions },
+      is_active: true,
+      is_verified: false,
+    });
+  }
+
   async function loadAdmins() {
     try {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
-      if (!token) navigate({ to: '/login' });
+      if (!token) {
+        navigate({ to: "/login" });
+        return;
+      }
       const data = await getAdmin();
       setAdmins(data);
     } catch {
       setError("Can not load admin list");
+      showAlert("error", "Không thể tải danh sách admin");
     } finally {
       setLoading(false);
     }
   }
+  useEffect(() => { void loadAdmins(); }, []);
 
-  // async function createAdmin() {
-  //   try {
-  //     setLoading(true);
-  //     const token = localStorage.getItem("accessToken");
-  //     if (!token) navigate({ to: '/login' });
-  //     const data = await getAdmin();
-  //     setAdmins(data);
-  //   } catch {
-  //     setError("Can not load admin list");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // }
 
-  useEffect(() => { loadAdmins(); }, []);
+  function handleEdit(admin: Admin) {
+    setIsOpenEdit(true);
+    setEditMode("profile");
+    setEditingAdminId(admin.id);
+
+    setForm({
+      email: admin.email,
+      full_name: admin.full_name,
+      password: "",
+      confirmPassword: "",
+      permissions: {
+        ...defaultPermissions,
+        ...admin.permissions,
+      },
+      is_active: admin.is_active,
+      is_verified: admin.is_verified,
+    });
+  }
+
+  async function handleDelete(admin_id: number) {
+    try {
+      await deleteAdmin(admin_id);
+      setDeleteTarget(null);
+      showAlert("success", "Đã xóa admin thành công");
+      await loadAdmins();
+    } catch {
+      setError("Xóa admin thất bại");
+      showAlert("error", "Xóa admin thất bại");
+    }
+  }
+
+  async function handleCreateAdmin(payload: CreateAdminRequest) {
+    try {
+      await createAdmin(payload);
+      showAlert("success", "Đã tạo admin mới");
+      await loadAdmins();
+      setIsOpenCreate(false);
+    } catch {
+      setError("Tạo admin thất bại");
+      showAlert("error", "Tạo admin thất bại");
+    }
+  }
+
+  async function handleSaveEdit() {
+    if (editingAdminId === null) return;
+
+    try {
+      if (editMode === "password") {
+        if (!form.password.trim()) {
+          showAlert("warning", "Vui lòng nhập mật khẩu mới");
+          return;
+        }
+
+        if (form.password !== form.confirmPassword) {
+          showAlert("warning", "Mật khẩu xác nhận không khớp");
+          return;
+        }
+
+        await changePassword({
+          admin_id: editingAdminId,
+          password: form.password,
+        });
+
+        showAlert("success", "Đã đổi mật khẩu admin");
+        closeEditDialog();
+        return;
+      }
+
+      await updateAdmin({
+        admin_id: editingAdminId,
+        email: form.email,
+        full_name: form.full_name,
+        permissions: form.permissions,
+        is_active: form.is_active,
+        is_verified: form.is_verified,
+      });
+
+      showAlert("success", "Đã cập nhật thông tin admin");
+      closeEditDialog();
+      await loadAdmins();
+    } catch {
+      showAlert("error", editMode === "password" ? "Đổi mật khẩu thất bại" : "Cập nhật admin thất bại");
+    }
+  }
+
+  const editPermissions = Object.entries(form.permissions);
 
   return (
 
     <div className="p-8 w-full">
+      <Alert
+        isOpen={alert.open}
+        type={alert.type}
+        message={alert.message}
+        onClose={() => setAlert((prev) => ({ ...prev, open: false }))}
+      />
+
       <header className="flex items-center justify-between mb-8">
         <div>
           <div className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -79,8 +227,10 @@ function Administrator() {
         >
           Thêm Admin
         </Button>
-        <CreateAdminDialog open={isOpenCreate}
-        onClose={() => setIsOpenCreate(false)}
+        <CreateAdminDialog
+          open={isOpenCreate}
+          onClose={() => setIsOpenCreate(false)}
+          callApi={handleCreateAdmin}
         />
       </div>
 
@@ -115,7 +265,7 @@ function Administrator() {
                 <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">{data.role}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="items-center flex gap-2 whitespace-nowrap">
-                    {Object.entries(data.permissions).filter(([_, v]) => v).map(([k]) => (
+                    {Object.entries(data.permissions ?? {}).filter(([_, v]) => v).map(([k]) => (
                       <span key={k} className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[15px] inline-block">{k}</span>
                     ))}
                   </div>
@@ -131,10 +281,10 @@ function Administrator() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-card z-10">
                   <div className="flex gap-2 justify-end">
-                    <Button variant="outlined" color="error" size="small" sx={{ textTransform: 'none' }} onClick={() => (setIsOpenDelete(true))}>
+                    <Button variant="outlined" color="error" size="small" sx={{ textTransform: 'none' }} onClick={() => setDeleteTarget(data)}>
                       <ShieldOff className="h-3 w-3 mr-1" /> Xóa
                     </Button>
-                    <Button variant="outlined" color="primary" size="small" sx={{ textTransform: 'none' }} onClick={() => (setIsOpenEdit(true))}>
+                    <Button variant="outlined" color="primary" size="small" sx={{ textTransform: 'none' }} onClick={() => (handleEdit(data))}>
                       <Edit className="h-3 w-3 mr-1" /> Edit
                     </Button>
                   </div>
@@ -145,47 +295,137 @@ function Administrator() {
             )}
           </tbody>
         </table>
-        
-        <div>
-          {isOpenDelete && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-                <h2 className="text-xl font-bold mb-4">Thêm Admin mới</h2>
+        <ConfirmDialog
+          open={Boolean(deleteTarget)}
+          title="Xác nhận xóa admin"
+          message={`Bạn có chắc muốn xóa admin ${deleteTarget?.email ?? "này"} không?`}
+          confirmLabel="Xóa"
+          cancelLabel="Hủy"
+          danger
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => {
+            if (deleteTarget) {
+              void handleDelete(deleteTarget.id);
+            }
+          }}
+        />
 
-                {/* Form nhập liệu */}
-                <div className="space-y-4">
-                  <input className="w-full border p-2 rounded" placeholder="Email" />
-                  <input className="w-full border p-2 rounded" placeholder="Họ và tên" />
+        <Dialog open={isOpenEdit} onClose={closeEditDialog} fullWidth maxWidth="md">
+          <DialogTitle sx={{ fontWeight: 700 }}>
+            Chỉnh sửa admin {editingAdminId !== null ? `#${editingAdminId}` : ""}
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Bật công tắc để chuyển sang layout đổi mật khẩu.
+                </Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={editMode === "password"}
+                      onChange={(_, checked) => setEditMode(checked ? "password" : "profile")}
+                    />
+                  }
+                  label="Đổi mật khẩu"
+                />
+              </Box>
 
-                  <div className="flex justify-end gap-2 mt-6">
-                    <Button onClick={() => setIsOpenDelete(false)}>Hủy</Button>
-                    <Button variant="contained" >Lưu</Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-        <div>
-          {isOpenEdit && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-                <h2 className="text-xl font-bold mb-4">Thêm Admin mới</h2>
+              <Divider />
 
-                {/* Form nhập liệu */}
-                <div className="space-y-4">
-                  <input className="w-full border p-2 rounded" placeholder="Email" />
-                  <input className="w-full border p-2 rounded" placeholder="Họ và tên" />
+              {editMode === "profile" ? (
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
+                  <TextField
+                    label="Email"
+                    value={form.email}
+                    onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+                    fullWidth
+                  />
+                  <TextField
+                    label="Họ và tên"
+                    value={form.full_name}
+                    onChange={(event) => setForm((prev) => ({ ...prev, full_name: event.target.value }))}
+                    fullWidth
+                  />
 
-                  <div className="flex justify-end gap-2 mt-6">
-                    <Button onClick={() => setIsOpenEdit(false)}>Hủy</Button>
-                    <Button variant="contained" >Lưu</Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+                  <Box sx={{ gridColumn: "1 / -1" }}>
+                    <Typography sx={{ fontWeight: 600, mb: 1 }}>Quyền</Typography>
+                    <FormGroup row>
+                      {editPermissions.map(([key, value]) => (
+                        <FormControlLabel
+                          key={key}
+                          control={
+                            <Switch
+                              checked={value}
+                              onChange={() => setForm((prev) => ({
+                                ...prev,
+                                permissions: {
+                                  ...prev.permissions,
+                                  [key]: !prev.permissions[key],
+                                },
+                              }))}
+                            />
+                          }
+                          label={key}
+                        />
+                      ))}
+                    </FormGroup>
+                  </Box>
+
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={form.is_active}
+                        onChange={(_, checked) => setForm((prev) => ({ ...prev, is_active: checked }))}
+                      />
+                    }
+                    label="Đang hoạt động"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={form.is_verified}
+                        onChange={(_, checked) => setForm((prev) => ({ ...prev, is_verified: checked }))}
+                      />
+                    }
+                    label="Đã xác minh"
+                  />
+                </Box>
+              ) : (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: "text.secondary" }}>
+                    <LockKeyhole className="h-4 w-4" />
+                    <Typography variant="body2">Nhập mật khẩu mới cho admin này.</Typography>
+                  </Box>
+                  <TextField
+                    label="Mật khẩu mới"
+                    type="password"
+                    value={form.password}
+                    onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                    fullWidth
+                  />
+                  <TextField
+                    label="Xác nhận mật khẩu"
+                    type="password"
+                    value={form.confirmPassword}
+                    onChange={(event) => setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+                    fullWidth
+                  />
+                </Box>
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={closeEditDialog}>Hủy</Button>
+            <Button
+              variant="contained"
+              onClick={() => void handleSaveEdit()}
+              startIcon={editMode === "password" ? <RefreshCcw className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+            >
+              {editMode === "password" ? "Đổi mật khẩu" : "Lưu thay đổi"}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
     </div>
   );

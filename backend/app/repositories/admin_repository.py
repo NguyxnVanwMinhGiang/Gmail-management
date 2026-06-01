@@ -67,7 +67,7 @@ def update_admin(
         admin.is_verified = is_verified
 
     if updated_by is not None:
-        admin.updated_by = is_verified
+        admin.updated_by = updated_by
 
     db.commit()
     db.refresh(admin)

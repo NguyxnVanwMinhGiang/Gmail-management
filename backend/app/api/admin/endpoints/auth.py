@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -26,7 +26,7 @@ def register_admin(data: RegisterRequestAdmin, db: Session = Depends(get_db)):
     return AuthServiceAdmin().register_admin(data, db)
 
 @router.post('/checkinfotoken')
-def checkinfotoken(token) -> int:
-    return get_current_admin()
+def checkinfotoken(authorization: str = Header(..., alias="Authorization")) -> int:
+    return get_current_admin(authorization)
 
 

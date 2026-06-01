@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Dialog,
     DialogTitle,
@@ -13,22 +13,34 @@ import {
     Divider,
     Button,
 } from "@mui/material";
+import type { CreateAdminRequest } from "../../api/adminApi";
 
 interface CreateAdminDialogProps {
     open: boolean;
     onClose: () => void;
+    callApi: (payload: CreateAdminRequest) => Promise<void>;
 }
+
+const defaultPermissions = {
+    log: false,
+    data: false,
+    sale: false,
+    management: false,
+};
 
 export default function CreateAdminDialog({
     open,
     onClose,
+    callApi
 }: CreateAdminDialogProps) {
+    const [fullName, setFullName] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [permissions, setPermissions] = useState({
-        log: true,
-        data: true,
-        sale: true,
-        management: true,
+        ...defaultPermissions,
     });
+    const [error, setError] = useState("");
 
     const handlePermissionChange = (key: keyof typeof permissions) => {
         setPermissions((prev) => ({
@@ -37,17 +49,37 @@ export default function CreateAdminDialog({
         }));
     };
 
-    const handleSave = () => {
-        const payload = {
-            role: "admin",
+    useEffect(() => {
+        if (!open) {
+            setFullName("");
+            setEmail("");
+            setPassword("");
+            setConfirmPassword("");
+            setPermissions({ ...defaultPermissions });
+            setError("");
+        }
+    }, [open]);
+
+    const handleSave = async () => {
+        if (!fullName.trim() || !email.trim() || !password.trim()) {
+            setError("Vui lòng nhập đầy đủ họ tên, email và mật khẩu.");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setError("Mật khẩu xác nhận không khớp.");
+            return;
+        }
+
+        setError("");
+        await callApi({
+            full_name: fullName.trim(),
+            email: email.trim(),
+            password,
             permissions,
-        };
-
-        console.log(payload);
-
-        // Sau này gọi API ở đây
-        // await createAdmin(payload)
-
+            is_active: true,
+            is_verified: false,
+        });
         onClose();
     };
 
@@ -59,9 +91,20 @@ export default function CreateAdminDialog({
 
             <DialogContent>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-                    <TextField label="Họ và tên" fullWidth />
+                    <TextField
+                        label="Họ và tên"
+                        fullWidth
+                        value={fullName}
+                        onChange={(event) => setFullName(event.target.value)}
+                    />
 
-                    <TextField label="Email" type="email" fullWidth />
+                    <TextField
+                        label="Email"
+                        type="email"
+                        fullWidth
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                    />
 
                     <TextField
                         label="Role"
@@ -100,7 +143,22 @@ export default function CreateAdminDialog({
                         </FormGroup>
                     </Box>
 
-                    <TextField label="Password" type="password" fullWidth />
+                    <TextField
+                        label="Password"
+                        type="password"
+                        fullWidth
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                    />
+                    <TextField
+                        label="Confirm Password"
+                        type="password"
+                        fullWidth
+                        value={confirmPassword}
+                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        error={Boolean(error)}
+                        helperText={error}
+                    />
                 </Box>
             </DialogContent>
 

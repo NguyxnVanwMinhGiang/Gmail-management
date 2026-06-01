@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -15,17 +15,21 @@ def get_all_admin(db: Session = Depends(get_db)):
     return AdminService.list_admin(db)
 
 @router.post("/")
-def create_admin(data: AdminCreate,token: str, db: Session = Depends(get_db)):
-    return AdminService.create_account_admin(db, data, token)
+def create_admin(data: AdminCreate, authorization: str = Header(..., alias="Authorization"), db: Session = Depends(get_db)):
+    return AdminService.create_account_admin(db, data, authorization)
 
 @router.put("/{admin_id}")
-def update_account_admin(data: AdminUpdate, token: str, db: Session= Depends(get_db)):
-    return AdminService.update_account_admin(db, data, token)
+def update_account_admin(admin_id: int, data: AdminUpdate, authorization: str = Header(..., alias="Authorization"), db: Session = Depends(get_db)):
+    if data.admin_id != admin_id:
+        data.admin_id = admin_id
+    return AdminService.update_account_admin(db, data, authorization)
 
-@router.patch("/{admin_id}/pasword")
-def change_password_admin(token: str, data: AdminChangePassword, db: Session= Depends(get_db)):
-    return AdminService.change_password_admin(db, data, token)
+@router.patch("/{admin_id}/password")
+def change_password_admin(admin_id: int, data: AdminChangePassword, authorization: str = Header(..., alias="Authorization"), db: Session= Depends(get_db)):
+    if data.admin_id != admin_id:
+        data.admin_id = admin_id
+    return AdminService.change_password_admin(db, data, authorization)
 
-@router.post("/{admin_id}")
+@router.delete("/{admin_id}")
 def delete_account_admin(admin_id: int, db: Session= Depends(get_db)):
     return AdminService.delete_account_admin(db, admin_id,)

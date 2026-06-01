@@ -6,7 +6,7 @@
 //   createAdmin,
 //   updateAdmin,
 //   deleteAdmin,
-// } from "../api/adminApi";
+// } from "adminApi.ts";
 
 // export const Route = createFileRoute("/admin")({
 //   component: AdminPage,
@@ -15,7 +15,7 @@
 // function AdminPage() {
 //   const navigate = useNavigate();
 
-//   const [admins, setAdmins] = useState<Admin[]>([]);
+
 //   const [error, setError] = useState("");
 //   const [loading, setLoading] = useState(false);
 
@@ -32,31 +32,6 @@
 //     is_active: true,
 //     is_verified: false,
 //   });
-
-//   async function loadAdmins() {
-//     try {
-//       setLoading(true);
-//       setError("");
-
-//       const token = localStorage.getItem("accessToken");
-
-//       if (!token) {
-//         navigate({ to: "/login" });
-//         return;
-//       }
-
-//       const data = await getAdmins();
-//       setAdmins(data);
-//     } catch {
-//       setError("Không thể tải danh sách admin");
-//     } finally {
-//       setLoading(false);
-//     }
-//   }
-
-//   useEffect(() => {
-//     loadAdmins();
-//   }, []);
 
 //   function resetForm() {
 //     setEditingAdminId(null);
