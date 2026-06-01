@@ -24,7 +24,7 @@ function logOut() {
 function AdminLayout() {
   const nav = [
     { to: "/admin/administrator", label: "administrator", icon: ShieldCog },
-    { to: "/admin/users", label: "Users", icon: Users },
+    { to: "/admin/dashboard", label: "Dashboard", icon: Users },
   ];
 
   return (

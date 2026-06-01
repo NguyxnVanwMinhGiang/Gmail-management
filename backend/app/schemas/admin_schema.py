@@ -1,7 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 
-
 class AdminCreate(BaseModel):
     email: EmailStr
     password: str

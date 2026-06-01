@@ -1,7 +1,7 @@
 import { Users, Package, TrendingUp, BookOpen } from 'lucide-react';
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/admin/users")({
+export const Route = createFileRoute("/admin/dashboard")({
   component: Dashboard,
 });
 

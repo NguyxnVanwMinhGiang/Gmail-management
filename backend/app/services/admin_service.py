@@ -8,10 +8,11 @@ from app.utils.jwt_util import get_current_admin
 
 
 class AdminService:
-    def list_admin(self, db: Session):
-        return admin_repository(db)
+    def list_admin(db: Session):
+        return admin_repository.get_all_admin(db)
     
-    def create_account_admin(self, db: Session, data: AdminCreate):
+    def create_account_admin(self, db: Session, data: AdminCreate, token: str):
+        admin_create = get_current_admin(token)
         checkEmail = admin_repository.find_by_email(data.email)
         if checkEmail == data.email:
             raise HTTPException(
@@ -20,14 +21,14 @@ class AdminService:
             )
         
         hashed_password = hash_password(data.password)
-
+        
         admin_repository.create_admin(
             db=db,
             email=data.email,
             password=hashed_password,
             full_name=data.full_name,
             permissions=data.permissions,
-            created_by=get_current_admin().get("id"),
+            created_by=admin_create
         )
         
         return {
@@ -54,8 +55,8 @@ class AdminService:
                 detail="Not found admin"
             )
         
-    def change_password_admin(db: Session, data: AdminChangePassword):
-        get_current_admin()
+    def change_password_admin(db: Session, data: AdminChangePassword, token: str):
+        get_current_admin(token)
         #OTP update
         password = hash_password(data.password)
         admin = admin_repository.change_password(
