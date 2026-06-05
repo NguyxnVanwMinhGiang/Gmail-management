@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Shield, Users, Mail, ArrowRight } from "lucide-react";
 
+
 export const Route = createFileRoute("/")({
   component: Index,
 });

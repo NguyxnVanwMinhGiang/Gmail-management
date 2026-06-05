@@ -1,17 +1,30 @@
-import { createFileRoute, Outlet, Link} from "@tanstack/react-router";
-import { Shield, Users, Mail, LogOut, Home, ShieldCog} from "lucide-react";
+import { createFileRoute, Outlet, Link, redirect } from "@tanstack/react-router";
+
+import { Shield, Users, LogOut, Home, ShieldCog } from "lucide-react";
 import Button from "@mui/material/Button";
 
 export const Route = createFileRoute("/admin")({
+  beforeLoad: () => {
+    const token = localStorage.getItem("accessToken");
+
+    if (!token) {
+      throw redirect({
+        to: "/login",
+      });
+    }
+  },
   component: AdminLayout,
 });
+
+function logOut() {
+  localStorage.removeItem('accessToken');
+  window.location.href = '/login';
+}
 
 function AdminLayout() {
   const nav = [
     { to: "/admin/administrator", label: "administrator", icon: ShieldCog },
-    { to: "/admin/users", label: "Users", icon: Users },
-    { to: "/admin/email", label: "Gmail", icon: Mail },
-    { to: "/admin/email", label: "Gmail", icon: Mail },
+    { to: "/admin/dashboard", label: "Dashboard", icon: Users },
   ];
 
   return (
@@ -28,11 +41,10 @@ function AdminLayout() {
               <Link
                 key={to}
                 to={to}
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition ${
-                  active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                }`}
+                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition ${active
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  }`}
               >
                 <Icon className="h-4 w-4" /> {label}
               </Link>
@@ -49,6 +61,7 @@ function AdminLayout() {
           <div className="px-3 py-2 text-xs text-sidebar-foreground/50 truncate">admin@example.com</div>
           <Button
             className="w-full justify-start text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+            onClick={logOut}
           >
             <LogOut className="h-4 w-4 mr-2" /> Đăng xuất
           </Button>

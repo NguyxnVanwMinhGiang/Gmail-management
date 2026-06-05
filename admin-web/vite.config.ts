@@ -18,7 +18,7 @@ export default defineConfig({
   ],
   server: {
     host: '127.0.0.1', // Cho phép truy cập qua mạng cục bộ (LAN) hoặc địa chỉ IP
-    port: 8000,      // Đổi port mặc định thành 3000
+    port: 5173,      // Đổi port mặc định thành 3000
     open: true,      // Tự động mở trình duyệt khi chạy server
     allowedHosts: ['.ngrok-free.dev', '.ngrok-free.app']
   },

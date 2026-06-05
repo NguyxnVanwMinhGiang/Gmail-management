@@ -1,7 +1,7 @@
 import { Users, Package, TrendingUp, BookOpen } from 'lucide-react';
 import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/admin/users")({
+export const Route = createFileRoute("/admin/dashboard")({
   component: Dashboard,
 });
 
@@ -14,7 +14,7 @@ const monthlyData = [
 
 
 
-function Dashboard(){
+function Dashboard() {
   return (
     <main className="p-8 bg-gray-50 min-h-screen">
       {/* Header */}
@@ -44,7 +44,7 @@ function Dashboard(){
             ))}
           </div>
         </div>
-        
+
         {/* <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center">
           <h2 className="text-lg font-semibold w-full mb-4">Mức độ hài lòng</h2>
           <div className="w-32 h-32 rounded-full border-8 border-blue-500 flex items-center justify-center mb-4">
@@ -54,7 +54,7 @@ function Dashboard(){
         </div> */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-lg font-semibold mb-6">Mức độ hài lòng</h2>
-          
+
           <div className="flex flex-row items-center gap-8">
             {/* Phần biểu đồ (Bên trái) */}
             <div className="flex-1 flex flex-col items-center">
@@ -77,8 +77,8 @@ function Dashboard(){
                 <div key={item.label} className="flex items-center gap-3 text-sm">
                   <span className="w-12 font-medium text-gray-700">{item.label}</span>
                   <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-blue-500 rounded-full" 
+                    <div
+                      className="h-full bg-blue-500 rounded-full"
                       style={{ width: item.percent }}
                     />
                   </div>

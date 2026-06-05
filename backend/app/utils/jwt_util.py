@@ -53,20 +53,57 @@ def generate_jwt_admin(user_id, email, permissions, algorithm="HS256", expiry_mi
         # "management" : decode.get("permissions").get("management")
     }
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/admin/auth/login")
-def get_current_admin(token: str = Depends(oauth2_scheme)):
-    payload = jwt.decode(token, config.SECRET_KEY_ADMIN, algorithms=["HS256"])
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/admin/auth/login")
+# def get_current_admin(token: str = Depends(oauth2_scheme)):
+#     payload = jwt.decode(token, config.SECRET_KEY_ADMIN, algorithms=["HS256"])
 
-    admin_id = payload.get("id")
+#     admin_id = payload.get("id")
+#     admin_role = payload.get("role")
+#     admin_permissions = payload.get("permissions").get("management")
+
+#     if admin_role != "admin":
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+    
+#     if admin_permissions != True:
+#         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    
+#     return {
+#         "admin_id": admin_id,
+#     }
+
+def _normalize_bearer_token(token: str) -> str:
+    if token.startswith("Bearer "):
+        return token.removeprefix("Bearer ").strip()
+    return token.strip()
+
+
+def get_current_admin(token: str) -> int:
+    payload = jwt.decode(_normalize_bearer_token(token), config.SECRET_KEY_ADMIN, algorithms=["HS256"])
+
+    admin_id_raw = payload.get("id") or payload.get("user_id")
+
+    if admin_id_raw is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token không có admin id"
+        )
+
+    admin_id = int(admin_id_raw)
+
     admin_role = payload.get("role")
-    admin_permissions = payload.get("permissions").get("management")
+    permissions = payload.get("permissions", {})
+    admin_permissions = permissions.get("management")
 
     if admin_role != "admin":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized"
+        )
     
-    if admin_permissions != True:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    if admin_permissions is not True:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden"
+        )
     
-    return {
-        "admin_id": admin_id,
-    }
+    return admin_id
