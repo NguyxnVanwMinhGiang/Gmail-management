@@ -96,9 +96,9 @@ function LoginPage() {
       try {
         const data = await login(email, password);
         localStorage.setItem("accessToken", data.access_token);
-        
+
         // Điều hướng người dùng sang trang chủ hoặc dashboard sau khi login thành công
-        navigate({ to: "/" }); 
+        navigate({ to: "/" });
       } catch (err: any) {
         setError(err.message || "Email hoặc mật khẩu không đúng");
       }
@@ -235,11 +235,10 @@ function LoginPage() {
               <button
                 type="button"
                 onClick={() => setIsLogin(true)}
-                className={`flex-1 h-11 rounded-lg transition ${
-                  isLogin
-                    ? "bg-white text-black"
-                    : "text-white"
-                }`}
+                className={`flex-1 h-11 rounded-lg transition ${isLogin
+                  ? "bg-white text-black"
+                  : "text-white"
+                  }`}
               >
                 Đăng nhập
               </button>
@@ -247,11 +246,10 @@ function LoginPage() {
               <button
                 type="button"
                 onClick={() => setIsLogin(false)}
-                className={`flex-1 h-11 rounded-lg transition ${
-                  !isLogin
-                    ? "bg-white text-black"
-                    : "text-white"
-                }`}
+                className={`flex-1 h-11 rounded-lg transition ${!isLogin
+                  ? "bg-white text-black"
+                  : "text-white"
+                  }`}
               >
                 Đăng ký
               </button>
