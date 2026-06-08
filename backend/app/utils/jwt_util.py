@@ -24,7 +24,7 @@ def generate_jwt_user(user_id, email, algorithm="HS256", expiry_minutes=120):
     }
     
     token = jwt.encode(payload, config.SECRET_KEY_USER, algorithm=algorithm)
-    return token
+    return {"token": token}
 
 def generate_jwt_admin(user_id, email, permissions, algorithm="HS256", expiry_minutes=120):
     """
@@ -77,10 +77,10 @@ def _normalize_bearer_token(token: str) -> str:
     return token.strip()
 
 
-def get_current_admin(token: str) -> int:
+def get_current_admin(token: str) -> tuple:
     payload = jwt.decode(_normalize_bearer_token(token), config.SECRET_KEY_ADMIN, algorithms=["HS256"])
 
-    admin_id_raw = payload.get("id") or payload.get("user_id")
+    admin_id_raw = payload.get("user_id")
 
     if admin_id_raw is None:
         raise HTTPException(
@@ -97,7 +97,7 @@ def get_current_admin(token: str) -> int:
     if admin_role != "admin":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthorized"
+            detail="Unauthorize"
         )
     
     if admin_permissions is not True:

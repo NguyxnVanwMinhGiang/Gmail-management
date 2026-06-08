@@ -2,7 +2,7 @@ import json
 
 from pydantic import BaseModel, EmailStr
 
-
+# USER
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
@@ -12,6 +12,13 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+
+
+
+
+
+
+# ADMIN
 class LoginRequestAdmin(BaseModel):
     email: EmailStr
     password: str

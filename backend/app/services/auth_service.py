@@ -10,7 +10,7 @@ from app.utils.jwt_util import generate_jwt_user, generate_jwt_admin, get_curren
 class AuthServiceUser:
     def __init__(self):
         self.user_repository = user_repository
-
+    
     def register(self, data: RegisterRequest, db: Session):
         existing_user = self.user_repository.find_by_email(db, data.email)
 
@@ -41,11 +41,12 @@ class AuthServiceUser:
         if not verify_password(data.password, user.password_hash):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sai tai khoan hoac mat khau")
         
-        generate_token = generate_jwt_user(user.id, user.email, user.role)
+        generate_token = generate_jwt_user(user.id, user.email)
         
         return {
             "message": "Login successfully",
-            "token": generate_token,
+            "accessToken": generate_token["token"],
+            "tokenType": "bearer"
         }
 
 

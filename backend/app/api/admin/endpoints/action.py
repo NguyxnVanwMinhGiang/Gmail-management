@@ -31,5 +31,5 @@ def change_password_admin(admin_id: int, data: AdminChangePassword, authorizatio
     return AdminService.change_password_admin(db, data, authorization)
 
 @router.delete("/{admin_id}")
-def delete_account_admin(admin_id: int, db: Session= Depends(get_db)):
-    return AdminService.delete_account_admin(db, admin_id,)
+def delete_account_admin(admin_id: int, db: Session= Depends(get_db), authorization: str = Header(..., alias="Authorization")):
+    return AdminService.delete_account_admin(db, admin_id, authorization)
