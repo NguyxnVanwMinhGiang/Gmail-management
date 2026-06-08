@@ -39,7 +39,7 @@ function Index() {
             <kbd className="px-1.5 py-0.5 rounded bg-[oklch(0.28_0.01_260)] text-[10px] border border-[oklch(0.34_0.01_260)]">K</kbd>
           </span>
         </div>
-        
+
       </div>
 
       {/* Nội dung chính của hòm thư */}
@@ -56,9 +56,8 @@ function Index() {
                 <button
                   key={i}
                   onClick={() => setSelected(i)}
-                  className={`block w-[calc(100%-8px)] mx-1 my-1 text-left px-4 py-3 border rounded border-white/20 transition-colors ${
-                    selected === i ? "bg-[oklch(0.28_0.06_255)]" : "hover:bg-[oklch(0.21_0.01_260)]"
-                  }`}
+                  className={`block w-[calc(100%-8px)] mx-1 my-1 text-left px-4 py-3 border rounded border-white/20 transition-colors ${selected === i ? "bg-[oklch(0.28_0.06_255)]" : "hover:bg-[oklch(0.21_0.01_260)]"
+                    }`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className={`truncate ${m.unread ? "font-semibold text-white" : "text-[oklch(0.85_0.01_260)]"}`}>{m.from}</span>
@@ -94,12 +93,12 @@ function Index() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <IconBtn icon={Reply} onClick={() => console.log("Đã bấm nút Reply!")}/>
-                    <IconBtn icon={ReplyAll} onClick={() => console.log("Đã bấm nút ReplyAll!")}/>
-                    <IconBtn icon={Forward} onClick={() => console.log("Đã bấm nút Forward!")}/>
-                    <IconBtn icon={Archive} onClick={() => console.log("Đã bấm nút Archive!")}/>
-                    <IconBtn icon={Tag} onClick={() => console.log("Đã bấm nút Tag!")}/>
-                    <IconBtn icon={Trash2} onClick={() => console.log("Đã bấm nút Trash2!")}/>
+                    <IconBtn icon={Reply} onClick={() => console.log("Đã bấm nút Reply!")} />
+                    <IconBtn icon={ReplyAll} onClick={() => console.log("Đã bấm nút ReplyAll!")} />
+                    <IconBtn icon={Forward} onClick={() => console.log("Đã bấm nút Forward!")} />
+                    <IconBtn icon={Archive} onClick={() => console.log("Đã bấm nút Archive!")} />
+                    <IconBtn icon={Tag} onClick={() => console.log("Đã bấm nút Tag!")} />
+                    <IconBtn icon={Trash2} onClick={() => console.log("Đã bấm nút Trash2!")} />
                   </div>
                 </div>
               </div>

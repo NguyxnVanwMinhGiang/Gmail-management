@@ -8,11 +8,11 @@ export const Route = createFileRoute('/')({
 })
 
 
-function register(){
+function register() {
   return console.log("register")
 }
 
-function signin(){
+function signin() {
   return console.log("sign in")
 }
 
@@ -31,7 +31,7 @@ function Index() {
         <header className="mx-auto max-w-7xl px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex items-center justify-center">
-              <img className="w-10 h-10 rounded-lg border-none outline-none" alt='img' src={myLogo}/>
+              <img className="w-10 h-10 rounded-lg border-none outline-none" alt='img' src={myLogo} />
             </div>
             <span className="font-semibold tracking-tight">Email4U</span>
           </div>
@@ -75,8 +75,8 @@ function Index() {
               </aside>
 
               <div className="col-span-4 space-y-2 text-xs border-x border-[oklch(0.85_0.01_250)] px-2">
-                {["Brilliant Chang","Garrison Nguyen","no-reply@appointment","Ada Lindberg","Robin Wald"].map((n,i)=>(
-                  <div key={i} className={`p-2 rounded ${i===1?"bg-primary/10":""}`}>
+                {["Brilliant Chang", "Garrison Nguyen", "no-reply@appointment", "Ada Lindberg", "Robin Wald"].map((n, i) => (
+                  <div key={i} className={`p-2 rounded ${i === 1 ? "bg-primary/10" : ""}`}>
                     <div className="font-semibold">{n}</div>
                     <div className="text-[oklch(0.5_0.02_250)] truncate">Email4U Send link: Content…</div>
                   </div>
