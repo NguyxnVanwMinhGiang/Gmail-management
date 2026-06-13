@@ -1,5 +1,4 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import HTTPException, status
 import jwt
 import datetime
 from app.core.config import config
@@ -49,27 +48,7 @@ def generate_jwt_admin(user_id, email, permissions, algorithm="HS256", expiry_mi
     # decode = jwt.decode(token, config.SECRET_KEY_ADMIN, algorithms=["HS256"])
     return {
         "token": token,
-        # "token_sub": decode.get("user_id"),  # Thời gian hết hạn tính bằng giây
-        # "management" : decode.get("permissions").get("management")
     }
-
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/admin/auth/login")
-# def get_current_admin(token: str = Depends(oauth2_scheme)):
-#     payload = jwt.decode(token, config.SECRET_KEY_ADMIN, algorithms=["HS256"])
-
-#     admin_id = payload.get("id")
-#     admin_role = payload.get("role")
-#     admin_permissions = payload.get("permissions").get("management")
-
-#     if admin_role != "admin":
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
-    
-#     if admin_permissions != True:
-#         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-    
-#     return {
-#         "admin_id": admin_id,
-#     }
 
 def _normalize_bearer_token(token: str) -> str:
     if token.startswith("Bearer "):
@@ -77,7 +56,7 @@ def _normalize_bearer_token(token: str) -> str:
     return token.strip()
 
 
-def get_current_admin(token: str) -> tuple:
+def get_current_admin(token: str) -> int:
     payload = jwt.decode(_normalize_bearer_token(token), config.SECRET_KEY_ADMIN, algorithms=["HS256"])
 
     admin_id_raw = payload.get("user_id")

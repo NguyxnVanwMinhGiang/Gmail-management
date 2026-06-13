@@ -6,7 +6,6 @@ from app.api.v1.router import api_router
 from app.api.admin.router import api_router_admin
 from app.middlewares.auth_middleware import AuthMiddleware
 
-
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -18,6 +17,8 @@ origins = [
     "http://localhost:3000",
     "http://127.0.0.1:5173",
     "http://localhost:5173",
+    "http://127.0.0.1:8080",
+    "http://localhost:8080",
 ]
 
 app.add_middleware(

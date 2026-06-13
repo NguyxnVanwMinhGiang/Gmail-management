@@ -1,5 +1,3 @@
-import json
-
 from pydantic import BaseModel, EmailStr
 
 # USER
@@ -13,10 +11,9 @@ class LoginRequest(BaseModel):
     password: str
 
 
-
-
-
-
+# GOOGLE LOGIN
+class GoogleLoginRequest(BaseModel):
+    access_token: str
 
 # ADMIN
 class LoginRequestAdmin(BaseModel):

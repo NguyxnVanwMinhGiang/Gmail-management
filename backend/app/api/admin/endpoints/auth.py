@@ -25,8 +25,8 @@ def login_admin(data: LoginRequestAdmin, db: Session = Depends(get_db)):
 def register_admin(data: RegisterRequestAdmin, db: Session = Depends(get_db)):
     return AuthServiceAdmin().register_admin(data, db)
 
-@router.post('/checkinfotoken')
-def checkinfotoken(authorization: str = Header(..., alias="Authorization")) -> int:
-    return get_current_admin(authorization)
+# @router.post('/checkinfotoken')
+# def checkinfotoken(authorization: str = Header(..., alias="Authorization")) -> int:
+#     return get_current_admin(authorization)
 
 

@@ -17,13 +17,16 @@ def has_management_permission(admin) -> bool:
 
 
 class AdminService:
-    def list_admin(db: Session):
-        return admin_repository.get_all_admin(db)
+    def __init__(self):
+        self.admin_repository = admin_repository
 
-    def create_account_admin(db: Session, data: AdminCreate, token: str):
+    def list_admin(self, db: Session):
+        return self.admin_repository.get_all_admin(db)
+
+    def create_account_admin(self, db: Session, data: AdminCreate, token: str):
         current_admin_id = get_current_admin(token)
 
-        checkEmail = admin_repository.find_by_email(db, data.email)
+        checkEmail = self.admin_repository.find_by_email(db, data.email)
         if checkEmail:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -32,7 +35,7 @@ class AdminService:
 
         hashed_password = hash_password(data.password)
 
-        admin_repository.create_admin(
+        self.admin_repository.create_admin(
             db=db,
             email=data.email,
             password_hash=hashed_password,
@@ -45,10 +48,10 @@ class AdminService:
             "message": "Admin created successfully"
         }
 
-    def update_account_admin(db: Session, data: AdminUpdate, token: str):
+    def update_account_admin(self, db: Session, data: AdminUpdate, token: str):
         current_admin_id = get_current_admin(token)
 
-        target_admin = admin_repository.find_by_id(db, data.admin_id)
+        target_admin = self.admin_repository.get_admin_by_id(db, data.admin_id)
         if not target_admin:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -75,7 +78,7 @@ class AdminService:
                     detail="Không thể tắt quyền management của chính mình"
                 )
 
-        admin = admin_repository.update_admin(
+        admin = self.admin_repository.update_admin(
             db=db,
             admin_id=data.admin_id,
             full_name=data.full_name,
@@ -91,10 +94,10 @@ class AdminService:
             "admin": admin
         }
 
-    def change_password_admin(db: Session, data: AdminChangePassword, token: str):
+    def change_password_admin(self, db: Session, data: AdminChangePassword, token: str):
         current_admin_id = get_current_admin(token)
 
-        target_admin = admin_repository.find_by_id(db, data.admin_id)
+        target_admin = self.admin_repository.get_admin_by_id(db, data.admin_id)
         if not target_admin:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -113,7 +116,7 @@ class AdminService:
 
         password = hash_password(data.password)
 
-        admin = admin_repository.change_password(
+        admin = self.admin_repository.change_password(
             db=db,
             admin_id=data.admin_id,
             password_hash=password
@@ -121,7 +124,7 @@ class AdminService:
 
         return admin
 
-    def delete_account_admin(db: Session, admin_id: int, token: str):
+    def delete_account_admin(self, db: Session, admin_id: int, token: str):
         current_admin_id = get_current_admin(token)
 
         # Không được xóa chính mình
@@ -131,7 +134,7 @@ class AdminService:
                 detail="Không thể xóa tài khoản của chính mình"
             )
 
-        target_admin = admin_repository.find_by_id(db, admin_id)
+        target_admin = self.admin_repository.get_admin_by_id(db, admin_id)
         if not target_admin:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -145,7 +148,7 @@ class AdminService:
                 detail="Không thể xóa admin khác có quyền management"
             )
 
-        admin_repository.delete_admin(db=db, admin_id=admin_id)
+        self.admin_repository.delete_admin(db=db, admin_id=admin_id)
 
         return {
             "message": "Delete successfully"

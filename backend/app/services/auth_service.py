@@ -1,18 +1,22 @@
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
+import requests
 
-from app.schemas.auth_schema import LoginRequestAdmin, RegisterRequest, LoginRequest, RegisterRequestAdmin
-from app.repositories import user_repository, admin_repository
+from app.schemas.auth_schema import LoginRequestAdmin, RegisterRequest, LoginRequest, RegisterRequestAdmin, GoogleLoginRequest
+from app.repositories import user_repository, admin_repository, google_repository
 from app.utils.hash_util import hash_password, verify_password
 from app.utils.jwt_util import generate_jwt_user, generate_jwt_admin, get_current_admin
+from app.utils.getTokenGoogle import verify_google_token
 
 
 class AuthServiceUser:
     def __init__(self):
         self.user_repository = user_repository
+        self.EMAIL_DOMAIN = "@mail.foryou"
     
     def register(self, data: RegisterRequest, db: Session):
-        existing_user = self.user_repository.find_by_email(db, data.email)
+        email = f"{data.email}{self.EMAIL_DOMAIN}"
+        existing_user = self.user_repository.find_by_email(db, email)
 
         if existing_user:
             raise HTTPException(
@@ -24,7 +28,7 @@ class AuthServiceUser:
 
         self.user_repository.create_user(
             db=db,
-            email=data.email,
+            email=email,
             password_hash=hashed_password,
             full_name=data.full_name
         )
@@ -38,7 +42,7 @@ class AuthServiceUser:
         if not user:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sai tai khoan hoac mat khau")
         
-        if not verify_password(data.password, user.password_hash):
+        if not verify_password(data.password, str(user.password_hash)):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sai tai khoan hoac mat khau")
         
         generate_token = generate_jwt_user(user.id, user.email)
@@ -53,10 +57,11 @@ class AuthServiceUser:
 class AuthServiceAdmin:
     def __init__(self):
         self.admin_repository = admin_repository
+        
 
     def login_admin(self, data: LoginRequestAdmin, db: Session):
         admin = self.admin_repository.find_by_email(db, data.email)
-        if not admin:
+        if not admin:    
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sai tai khoan hoac mat khau")
         
         if not verify_password(data.password, admin.password_hash):
@@ -70,8 +75,7 @@ class AuthServiceAdmin:
             "tokenType": "bearer"
         }
 
-    def register_admin(self, data: RegisterRequestAdmin, db: Session):
-
+    def register_admin(self, data: RegisterRequestAdmin, db: Session, token: str):
         existing_admin = self.admin_repository.find_by_email(db, data.email)
 
         if existing_admin:
@@ -90,8 +94,78 @@ class AuthServiceAdmin:
             password_hash=hashed_password,
             full_name=data.full_name,
             permissions=permissions,
-            created_by=get_current_admin().get("id"),
+            created_by=get_current_admin(token=token)
         )
         return {
             "message": "Admin registered successfully",
+        }
+
+
+class AuthServiceGoogle:
+    def __init__(self):
+        self.google_repository = google_repository
+
+    def login_with_google(self, db: Session, access_token: str):
+        google_response = requests.get(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            headers={
+                "Authorization": f"Bearer {access_token}"
+            }
+        )
+
+        if google_response.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Google token không hợp lệ"
+            )
+
+        google_user = google_response.json()
+
+        google_id = google_user.get("sub")
+        email = google_user.get("email")
+        full_name = google_user.get("name")
+        email_verified = google_user.get("email_verified")
+
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Không lấy được email từ Google"
+            )
+
+        if email_verified is not True:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email Google chưa được xác minh"
+            )
+    
+        user = self.google_repository.find_by_google_id(db, google_id)
+
+        if not user:
+            user = self.google_repository.create_user_gg(
+                db=db,
+                google_id=google_id,
+                full_name=full_name,
+                email=email,           
+                is_verified=True,
+                is_active=True
+            )
+
+        else:
+            if not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Tài khoản đã bị khóa"
+                )
+
+        access_token_system = verify_google_token(user.id, user.email)
+
+        return {
+            "message": "Login Google successfully",
+            "accessToken": access_token_system,
+            "tokenType": "bearer",
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name
+            }
         }

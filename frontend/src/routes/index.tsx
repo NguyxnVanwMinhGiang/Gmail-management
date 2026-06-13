@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowRight, Mail, Calendar, Users, CalendarClock, Send, Check } from "lucide-react";
 import myLogo from "../assets/logo.svg"
 
@@ -7,14 +7,6 @@ export const Route = createFileRoute('/')({
   component: Index,
 })
 
-
-function register() {
-  return console.log("register")
-}
-
-function signin() {
-  return console.log("sign in")
-}
 
 function Index() {
   return (
@@ -35,9 +27,9 @@ function Index() {
             </div>
             <span className="font-semibold tracking-tight">Email4U</span>
           </div>
-          <button onClick={signin} className="px-5 py-2 cursor-pointer rounded-md border border-border text-sm font-medium hover:bg-accent transition">
+          <Link to={'/login'} className="px-5 py-2 cursor-pointer rounded-md border border-border text-sm font-medium hover:bg-accent transition">
             SIGN IN
-          </button>
+          </Link>
         </header>
 
         <div className="mx-auto max-w-4xl px-6 pt-16 text-center">
@@ -47,13 +39,14 @@ function Index() {
           <p className="mt-6 text-lg text-muted-foreground">
             Ad free, privacy-first email from Email For You that puts you in control.
           </p>
-          <button
+          <Link
             className="mt-10 cursor-pointer inline-flex items-center gap-3 px-7 py-3.5 rounded-md font-semibold text-primary-foreground tracking-wide text-sm"
             style={{ background: "var(--gradient-brand)", boxShadow: "var(--shadow-glow)" }}
-            onClick={register}
+            to={'/login'}
           >
             JOIN US <ArrowRight className="w-4 h-4" />
-          </button>
+            
+          </Link>
         </div>
 
         {/* Mock app screenshot */}
@@ -175,13 +168,13 @@ function Index() {
               <span className="text-muted-foreground">per month, paid annually</span>
             </div>
 
-            <button
+            <Link
               className="mt-6 w-full cursor-pointer inline-flex items-center justify-center gap-2 px-6 py-3 rounded-md font-semibold text-primary-foreground tracking-wide text-sm"
               style={{ background: "var(--gradient-brand)" }}
-              onClick={register}
+              to={'/login'} 
             >
               JOIN US PLUS <ArrowRight className="w-4 h-4" />
-            </button>
+            </Link>
 
             <ul className="mt-8 space-y-3 text-sm">
               {[
