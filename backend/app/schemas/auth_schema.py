@@ -13,7 +13,9 @@ class LoginRequest(BaseModel):
 
 # GOOGLE LOGIN
 class GoogleLoginRequest(BaseModel):
-    access_token: str
+    id_token: str | None = None
+    credential: str | None = None
+    access_token: str | None = None
 
 # ADMIN
 class LoginRequestAdmin(BaseModel):

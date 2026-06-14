@@ -1,108 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useGoogleLogin } from "@react-oauth/google";
+import { GoogleLogin } from "@react-oauth/google";
 import { Mail, Lock, User, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { loginWithEmail, loginWithGoogle, registerWithEmail, saveAuthData } from "../api/auth";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
-
-const API_BASE_URL = "http://127.0.0.1:8080";
-
-type AuthResponse = {
-  message?: string;
-  accessToken?: string;
-  access_token?: string;
-  tokenType?: string;
-  token_type?: string;
-  user?: {
-    id: number;
-    email: string;
-    full_name?: string;
-  };
-};
-
-async function readApiError(response: Response, fallbackMessage: string) {
-  const errorData = await response.json().catch(() => ({}));
-  return (
-    errorData.detail ||
-    errorData.message ||
-    fallbackMessage
-  );
-}
-
-function saveAuthData(data: AuthResponse) {
-  const accessToken = data.accessToken || data.access_token;
-  const tokenType = data.tokenType || data.token_type || "bearer";
-
-  if (!accessToken) {
-    throw new Error("Backend không trả về accessToken");
-  }
-
-  localStorage.setItem("accessToken", accessToken);
-  localStorage.setItem("tokenType", tokenType);
-
-  if (data.user) {
-    localStorage.setItem("user", JSON.stringify(data.user));
-  }
-}
-
-async function loginWithEmail(email: string, password: string) {
-  const response = await fetch(`${API_BASE_URL}/api/user/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      email,
-      password,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(await readApiError(response, "Email hoặc mật khẩu không đúng"));
-  }
-
-  return response.json();
-}
-
-async function registerWithEmail(fullName: string, email: string, password: string) {
-  const response = await fetch(`${API_BASE_URL}/api/user/auth/register`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      full_name: fullName,
-      email,
-      password,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(await readApiError(response, "Đăng ký thất bại"));
-  }
-
-  return response.json();
-}
-
-async function loginWithGoogle(accessToken: string) {
-  const response = await fetch(`${API_BASE_URL}/api/user/auth/google-login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      access_token: accessToken,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(await readApiError(response, "Đăng nhập bằng Google thất bại"));
-  }
-
-  return response.json();
-}
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -136,7 +40,7 @@ function LoginPage() {
     setSuccessMessage("");
   }, [isLogin]);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setSuccessMessage("");
@@ -167,24 +71,18 @@ function LoginPage() {
     }
   }
 
-  const triggerGoogleLogin = useGoogleLogin({
-    flow: "implicit",
-    onSuccess: async (tokenResponse) => {
-      setError("");
-      setSuccessMessage("");
+  async function handleGoogleLogin(credential: string) {
+    setError("");
+    setSuccessMessage("");
+    try {
+      const data = await loginWithGoogle(credential);
+      saveAuthData(data);
+      navigate({ to: "/mail" });
+    } catch (err: any) {
+      setError(err.message || "Đăng nhập bằng Google thất bại");
+    }
+  }
 
-      try {
-        const data = await loginWithGoogle(tokenResponse.access_token);
-        saveAuthData(data);
-        navigate({ to: "/mail" });
-      } catch (err: any) {
-        setError(err.message || "Đăng nhập bằng Google thất bại");
-      }
-    },
-    onError: () => {
-      setError("Không thể kết nối với Google");
-    },
-  });
 
   function openPopup(title: string, content: string) {
     setPopupTitle(title);
@@ -274,9 +172,8 @@ function LoginPage() {
               <button
                 type="button"
                 onClick={() => setIsLogin(true)}
-                className={`flex-1 h-11 rounded-lg transition ${
-                  isLogin ? "bg-white text-black" : "text-white"
-                }`}
+                className={`flex-1 h-11 rounded-lg transition ${isLogin ? "bg-white text-black" : "text-white"
+                  }`}
               >
                 Đăng nhập
               </button>
@@ -284,9 +181,8 @@ function LoginPage() {
               <button
                 type="button"
                 onClick={() => setIsLogin(false)}
-                className={`flex-1 h-11 rounded-lg transition ${
-                  !isLogin ? "bg-white text-black" : "text-white"
-                }`}
+                className={`flex-1 h-11 rounded-lg transition ${!isLogin ? "bg-white text-black" : "text-white"
+                  }`}
               >
                 Đăng ký
               </button>
@@ -392,14 +288,20 @@ function LoginPage() {
                     <div className="grow border-t border-white/10" />
                   </div>
 
-                  <button
-                    type="button"
-                    className="w-full h-14 rounded-xl bg-white text-black font-semibold hover:bg-zinc-200 transition flex items-center justify-center gap-3"
-                    onClick={() => triggerGoogleLogin()}
-                  >
-                    <svg className="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M3.06364 7.50914C4.70909 4.24092 8.09084 2 12 2C14.6954 2 16.959 2.99095 18.6909 4.60455L15.8227 7.47274C14.7864 6.48185 13.4681 5.97727 12 5.97727C9.39542 5.97727 7.19084 7.73637 6.40455 10.1C6.2045 10.7 6.09086 11.3409 6.09086 12C6.09086 12.6591 6.2045 13.3 6.40455 13.9C7.19084 16.2636 9.39542 18.0227 12 18.0227C13.3454 18.0227 14.4909 17.6682 15.3864 17.0682C16.4454 16.3591 17.15 15.3 17.3818 14.05H12V10.1818H21.4181C21.5364 10.8363 21.6 11.5182 21.6 12.2273C21.6 15.2727 20.5091 17.8363 18.6181 19.5773C16.9636 21.1046 14.7 22 12 22C8.09084 22 4.70909 19.7591 3.06364 16.4909C2.38638 15.1409 2 13.6136 2 12C2 10.3864 2.38638 8.85911 3.06364 7.50914Z"></path></svg>
-                    Đăng nhập bằng Google
-                  </button>
+                  <GoogleLogin
+                    ux_mode="popup"
+                    onSuccess={async (credentialResponse) => {
+                      if (!credentialResponse.credential) {
+                        console.log("Không nhận được credential từ Google");
+                        return;
+                      }
+
+                      await handleGoogleLogin(credentialResponse.credential);
+                    }}
+                    onError={() => {
+                      console.log("Google login failed");
+                    }}
+                  />
                 </>
               )}
             </div>

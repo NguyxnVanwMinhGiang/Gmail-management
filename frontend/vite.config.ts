@@ -17,6 +17,9 @@ export default defineConfig({
     tailwindcss()
   ],
   server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    },
     host: '127.0.0.1', // Cho phép truy cập qua mạng cục bộ (LAN) hoặc địa chỉ IP
     port: 8080,      // Đổi port mặc định thành 3000
     open: true,      // Tự động mở trình duyệt khi chạy server

@@ -1,6 +1,5 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-import requests
 
 from app.schemas.auth_schema import LoginRequestAdmin, RegisterRequest, LoginRequest, RegisterRequestAdmin, GoogleLoginRequest
 from app.repositories import user_repository, admin_repository, google_repository
@@ -105,25 +104,22 @@ class AuthServiceGoogle:
     def __init__(self):
         self.google_repository = google_repository
 
-    def login_with_google(self, db: Session, access_token: str):
-        google_response = requests.get(
-            "https://www.googleapis.com/oauth2/v3/userinfo",
-            headers={
-                "Authorization": f"Bearer {access_token}"
-            }
-        )
+    def login_google(self, data: GoogleLoginRequest, db: Session):
+        google_token = data.id_token or data.credential or data.access_token
 
-        if google_response.status_code != 200:
+        if not google_token:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Google token không hợp lệ"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Thiếu token đăng nhập Google"
             )
 
-        google_user = google_response.json()
+        token_type = "access_token" if data.access_token and not (data.id_token or data.credential) else "id_token"
 
-        google_id = google_user.get("sub")
+        google_user = verify_google_token(google_token, token_type)
+
+        google_id = google_user.get("google_user_id")
         email = google_user.get("email")
-        full_name = google_user.get("name")
+        full_name = google_user.get("full_name")
         email_verified = google_user.get("email_verified")
 
         if not email:
@@ -157,11 +153,11 @@ class AuthServiceGoogle:
                     detail="Tài khoản đã bị khóa"
                 )
 
-        access_token_system = verify_google_token(user.id, user.email)
+        access_token_system = generate_jwt_user(user.id, user.email)
 
         return {
             "message": "Login Google successfully",
-            "accessToken": access_token_system,
+            "accessToken": access_token_system["token"],
             "tokenType": "bearer",
             "user": {
                 "id": user.id,

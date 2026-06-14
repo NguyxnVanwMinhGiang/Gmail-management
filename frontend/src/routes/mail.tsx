@@ -6,6 +6,13 @@ import Account from '../components/mail/Account'
 
 export const Route = createFileRoute('/mail')({
   beforeLoad: () => {
+    const token = localStorage.getItem("accessToken");
+    
+    if (!token) {
+      throw redirect({
+        to: "/login",
+      });
+    }
     // Nếu người dùng truy cập /mail, tự động chuyển hướng đến /mail/inbox
     if (location.pathname === "/mail") {
       throw redirect({
