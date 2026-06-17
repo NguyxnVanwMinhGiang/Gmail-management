@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as MailRouteImport } from './routes/mail'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as MailInboxRouteImport } from './routes/mail.inbox'
 
 const MailRoute = MailRouteImport.update({
   id: '/mail',
@@ -29,43 +28,35 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MailInboxRoute = MailInboxRouteImport.update({
-  id: '/inbox',
-  path: '/inbox',
-  getParentRoute: () => MailRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/mail': typeof MailRouteWithChildren
-  '/mail/inbox': typeof MailInboxRoute
+  '/mail': typeof MailRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/mail': typeof MailRouteWithChildren
-  '/mail/inbox': typeof MailInboxRoute
+  '/mail': typeof MailRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/mail': typeof MailRouteWithChildren
-  '/mail/inbox': typeof MailInboxRoute
+  '/mail': typeof MailRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/mail' | '/mail/inbox'
+  fullPaths: '/' | '/login' | '/mail'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/mail' | '/mail/inbox'
-  id: '__root__' | '/' | '/login' | '/mail' | '/mail/inbox'
+  to: '/' | '/login' | '/mail'
+  id: '__root__' | '/' | '/login' | '/mail'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
-  MailRoute: typeof MailRouteWithChildren
+  MailRoute: typeof MailRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -91,30 +82,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mail/inbox': {
-      id: '/mail/inbox'
-      path: '/inbox'
-      fullPath: '/mail/inbox'
-      preLoaderRoute: typeof MailInboxRouteImport
-      parentRoute: typeof MailRoute
-    }
   }
 }
-
-interface MailRouteChildren {
-  MailInboxRoute: typeof MailInboxRoute
-}
-
-const MailRouteChildren: MailRouteChildren = {
-  MailInboxRoute: MailInboxRoute,
-}
-
-const MailRouteWithChildren = MailRoute._addFileChildren(MailRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
-  MailRoute: MailRouteWithChildren,
+  MailRoute: MailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import "./index.css"
 
 // Import the generated route tree
@@ -18,15 +19,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+// Create Query client for react-query
+const queryClient = new QueryClient()
+
 // Render the app
 const rootElement = document.getElementById('root')!
 if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <StrictMode>
-      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-        <RouterProvider router={router} />
-      </GoogleOAuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+          <RouterProvider router={router} />
+        </GoogleOAuthProvider>
+      </QueryClientProvider>
     </StrictMode>,
   )
 }

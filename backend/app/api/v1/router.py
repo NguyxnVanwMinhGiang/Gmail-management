@@ -1,6 +1,6 @@
 #Khai bao router cho API v1
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth
+from app.api.v1.endpoints import auth, mail
 
 api_router = APIRouter()
 

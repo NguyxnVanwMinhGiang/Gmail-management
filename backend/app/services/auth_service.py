@@ -1,12 +1,13 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.auth_schema import LoginRequestAdmin, RegisterRequest, LoginRequest, RegisterRequestAdmin, GoogleLoginRequest
 from app.repositories import user_repository, admin_repository, google_repository
 from app.utils.hash_util import hash_password, verify_password
 from app.utils.jwt_util import generate_jwt_user, generate_jwt_admin, get_current_admin
-from app.utils.getTokenGoogle import verify_google_token
 
+from app.utils.Google import callAPToken
 
 class AuthServiceUser:
     def __init__(self):
@@ -99,69 +100,48 @@ class AuthServiceAdmin:
             "message": "Admin registered successfully",
         }
 
-
-class AuthServiceGoogle:
+class GoogleLoginService:
     def __init__(self):
         self.google_repository = google_repository
 
-    def login_google(self, data: GoogleLoginRequest, db: Session):
-        google_token = data.id_token or data.credential or data.access_token
+    def refresh_access_token(self, code: str, db: Session):
+        callApi = callAPToken(code)
 
-        if not google_token:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Thiếu token đăng nhập Google"
+        google_id = callApi["google_id"]
+        full_name = callApi["full_name"]
+        email = callApi["email"]
+        google_refresh_token = callApi["google_refresh_token"]
+        google_token_expires_at = callApi["google_token_expires_at"]
+
+        user = self.google_repository.find_by_google_account(db, email)
+
+        if user:
+            self.google_repository.update_user_gg(
+                db,
+                google_id,
+                full_name,
+                google_refresh_token,
+                google_token_expires_at
             )
-
-        token_type = "access_token" if data.access_token and not (data.id_token or data.credential) else "id_token"
-
-        google_user = verify_google_token(google_token, token_type)
-
-        google_id = google_user.get("google_user_id")
-        email = google_user.get("email")
-        full_name = google_user.get("full_name")
-        email_verified = google_user.get("email_verified")
-
-        if not email:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Không lấy được email từ Google"
-            )
-
-        if email_verified is not True:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email Google chưa được xác minh"
-            )
-    
-        user = self.google_repository.find_by_google_id(db, google_id)
-
-        if not user:
-            user = self.google_repository.create_user_gg(
+        else:
+            self.google_repository.create_user_gg(
                 db=db,
                 google_id=google_id,
                 full_name=full_name,
-                email=email,           
-                is_verified=True,
-                is_active=True
+                email=email,
+                google_refresh_token=google_refresh_token,
+                google_token_expires_at=google_token_expires_at
             )
-
-        else:
-            if not user.is_active:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Tài khoản đã bị khóa"
-                )
-
-        access_token_system = generate_jwt_user(user.id, user.email)
+        
+        system_jwt_token = generate_jwt_user(google_id, email)
 
         return {
-            "message": "Login Google successfully",
-            "accessToken": access_token_system["token"],
+            "message": "Login successfully",
+            "accessToken": system_jwt_token["token"],
             "tokenType": "bearer",
             "user": {
-                "id": user.id,
-                "email": user.email,
-                "full_name": user.full_name
+                "email": email,
+                "full_name": full_name,
+                "role": "user"
             }
         }

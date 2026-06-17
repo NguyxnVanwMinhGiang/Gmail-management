@@ -1,32 +1,46 @@
-from sqlalchemy import TEXT, Column, Integer, String, Boolean, DateTime
+# app/models/email.py
+
+from sqlalchemy import Column, BigInteger, String, Text, Boolean, DateTime, UniqueConstraint
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.sql import func
 from app.core.database import Base
 
-class Emails(Base):
+
+class Email(Base):
     __tablename__ = "emails"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(BigInteger, primary_key=True, index=True)
 
-    # user sở hữu email này
-    user_id = Column(Integer, index=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
 
-    # email nằm trong mailbox nào: inbox, sent, spam, trash...
-    mailbox_id = Column(Integer, index=True)
+    provider = Column(String(50), nullable=False, default="google")
+    gmail_message_id = Column(String(255), nullable=False)
+    gmail_thread_id = Column(String(255), nullable=True)
 
-    # địa chỉ gửi / nhận
-    email_from = Column(String(255), unique=True, nullable=False)
-    email_to = Column(String(255), unique=True, nullable=False)
+    email_from = Column(Text, nullable=True)
+    email_to = Column(Text, nullable=True)
+    subject = Column(Text, nullable=True)
 
-    subject = Column(String(255), unique=True, nullable=False)
-    # body đã mã hóa
-    body_text = Column(TEXT)
-    body_html = Column(TEXT)
+    body_text = Column(Text, nullable=True)
+    body_html = Column(Text, nullable=True)
+    snippet = Column(Text, nullable=True)
 
-    sent_at = Column(DateTime, default=func.current_timestamp())
+    label_ids = Column(ARRAY(Text), nullable=True)
 
     is_read = Column(Boolean, default=False)
     is_starred = Column(Boolean, default=False)
-    is_delete = Column(Boolean, default=False)
-    is_spam = Column(Boolean, default=False)
+    is_deleted = Column(Boolean, default=False)
+
+    sent_at = Column(DateTime, nullable=True)
+    received_at = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=func.current_timestamp())
+    updated_at = Column(
+        DateTime,
+        default=func.current_timestamp(),
+        onupdate=func.current_timestamp()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "gmail_message_id", name="uq_user_gmail_message"),
+    )

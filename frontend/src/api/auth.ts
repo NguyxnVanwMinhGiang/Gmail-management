@@ -1,5 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 const AUTH_BASE_URL = `${API_BASE_URL.replace(/\/$/, "")}/api/v1/auth`;
+const API_GOOGLE_READ = "openid email profile https://www.googleapis.com/auth/gmail.readonly"
 
 type AuthResponse = {
     message?: string;
@@ -13,6 +14,12 @@ type AuthResponse = {
         full_name?: string;
     };
 };
+
+// Định nghĩa interface cho dữ liệu trả về từ FastAPI backend của bạn
+interface BackendAuthResponse {
+  accessToken: string;
+  tokenType?: string;
+}
 
 async function readApiError(response: Response, fallbackMessage: string) {
     const contentType = response.headers.get("content-type") || "";
@@ -83,23 +90,36 @@ async function registerWithEmail(fullName: string, email: string, password: stri
     );
 }
 
-async function loginWithGoogle(idToken: string) {
-    return requestAuth<AuthResponse>(
-        "/google-login",
-        {
-            id_token: idToken,
-            credential: idToken,
+async function sendCodeForBackend(authorizationCode: string) {
+    const response = await fetch("http://localhost:8000/api/v1/auth/google-login", {
+        method: "POST",
+        headers: {
+        "Content-Type": "application/json"
         },
-        "Đăng nhập bằng Google thất bại",
-    );
+        body: JSON.stringify({ code: authorizationCode })
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const message =
+        typeof errorData.detail === "string"
+            ? errorData.detail
+            : JSON.stringify(errorData.detail || errorData, null, 2);
+
+        throw new Error(message || "Backend trả về lỗi khi xác thực code");
+    }
+    const data: BackendAuthResponse = await response.json()
+    return data;
 }
 
 export {
     API_BASE_URL,
     AUTH_BASE_URL,
+    API_GOOGLE_READ,
     loginWithEmail,
-    loginWithGoogle,
     registerWithEmail,
     saveAuthData,
+    sendCodeForBackend,
+    type BackendAuthResponse,
     type AuthResponse,
+
 }

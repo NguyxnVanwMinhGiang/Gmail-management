@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { GoogleLogin } from "@react-oauth/google";
+import { useGoogleLogin } from '@react-oauth/google';
 import { Mail, Lock, User, X } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { loginWithEmail, loginWithGoogle, registerWithEmail, saveAuthData } from "../api/auth";
+import { loginWithEmail, registerWithEmail, saveAuthData, sendCodeForBackend, API_GOOGLE_READ } from "../api/auth";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -10,6 +10,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState<boolean>(false);
 
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -71,18 +72,37 @@ function LoginPage() {
     }
   }
 
-  async function handleGoogleLogin(credential: string) {
-    setError("");
-    setSuccessMessage("");
-    try {
-      const data = await loginWithGoogle(credential);
-      saveAuthData(data);
-      navigate({ to: "/mail" });
-    } catch (err: any) {
-      setError(err.message || "Đăng nhập bằng Google thất bại");
-    }
-  }
+  const handleLoginSuccess = async (tokenResponse: Omit<import('@react-oauth/google').CodeResponse, "error" | "error_description" | "error_uri">) => {
+    if ('code' in tokenResponse && tokenResponse.code) {
+      const authorizationCode: string = tokenResponse.code;
+      console.log("Mã code nhận được từ Google:", authorizationCode);
+      setLoading(true);
+      try {
+        const data = await sendCodeForBackend(authorizationCode);
+        saveAuthData(data);
+        navigate({ to: "/mail" });
+        return;
 
+      } catch (error: any) {
+        console.error("Lỗi đăng nhập:", error);
+        alert(error.message || "Có lỗi xảy ra trong quá trình xử lý đăng nhập.");
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      alert("Không nhận được mã xác thực (Code) hợp lệ từ Google.");
+    }
+  };
+
+  const login = useGoogleLogin({
+    flow: 'auth-code',
+    scope: API_GOOGLE_READ,
+    onSuccess: handleLoginSuccess,
+    onError: (errorResponse) => {
+      console.error("Google Login Error:", errorResponse);
+      alert("Đăng nhập Google thất bại.");
+    }
+  });
 
   function openPopup(title: string, content: string) {
     setPopupTitle(title);
@@ -272,7 +292,7 @@ function LoginPage() {
 
                 <button
                   type="submit"
-                  className="w-full h-14 rounded-xl bg-white text-black font-semibold hover:bg-zinc-200 transition"
+                  className="w-full h-14 rounded-xl bg-white text-black font-semibold cursor-pointer hover:bg-zinc-200 transition"
                 >
                   {isLogin ? "Đăng nhập bằng email" : "Tạo tài khoản"}
                 </button>
@@ -288,20 +308,24 @@ function LoginPage() {
                     <div className="grow border-t border-white/10" />
                   </div>
 
-                  <GoogleLogin
-                    ux_mode="popup"
-                    onSuccess={async (credentialResponse) => {
-                      if (!credentialResponse.credential) {
-                        console.log("Không nhận được credential từ Google");
-                        return;
-                      }
-
-                      await handleGoogleLogin(credentialResponse.credential);
-                    }}
-                    onError={() => {
-                      console.log("Google login failed");
-                    }}
-                  />
+                  <div className="w-full text-sm">
+                    <button
+                      onClick={() => login()}
+                      disabled={loading}
+                      className="flex items-center justify-center gap-3 w-full h-14 cursor-pointer rounded-xl border border-zinc-200 bg-white text-black font-semibold hover:bg-zinc-100 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      {loading ? (
+                        <span>Đang xử lý...</span>
+                      ) : (
+                        <>
+                          <svg className="h-5 w-5 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M3.06364 7.50914C4.70909 4.24092 8.09084 2 12 2C14.6954 2 16.959 2.99095 18.6909 4.60455L15.8227 7.47274C14.7864 6.48185 13.4681 5.97727 12 5.97727C9.39542 5.97727 7.19084 7.73637 6.40455 10.1C6.2045 10.7 6.09086 11.3409 6.09086 12C6.09086 12.6591 6.2045 13.3 6.40455 13.9C7.19084 16.2636 9.39542 18.0227 12 18.0227C13.3454 18.0227 14.4909 17.6682 15.3864 17.0682C16.4454 16.3591 17.15 15.3 17.3818 14.05H12V10.1818H21.4181C21.5364 10.8363 21.6 11.5182 21.6 12.2273C21.6 15.2727 20.5091 17.8363 18.6181 19.5773C16.9636 21.1046 14.7 22 12 22C8.09084 22 4.70909 19.7591 3.06364 16.4909C2.38638 15.1409 2 13.6136 2 12C2 10.3864 2.38638 8.85911 3.06364 7.50914Z"></path>
+                          </svg>
+                          <span>Đăng nhập bằng Google</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </>
               )}
             </div>
