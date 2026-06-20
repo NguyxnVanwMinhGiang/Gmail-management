@@ -31,17 +31,12 @@ def create_user_gg(
     db.refresh(user_gg)
     return user_gg
 
-def find_by_google_account(db: Session, email: str):
-    return db.query(Users_gg).filter(Users_gg.email == email).first()
-
-def find_by_id(db: Session, user_id: int):
-    return db.query(Users_gg).filter(Users_gg.id == user_id).first()
-
-def update_user_gg(db: Session, google_id: int, full_name, google_refresh_token, google_token_expires_at):
+def update_user_gg(db: Session, google_id: str, full_name, google_refresh_token, google_token_expires_at):
     user_gg = db.query(Users_gg).filter(Users_gg.google_id == google_id).first()
     if user_gg:
         user_gg.full_name = full_name
-        user_gg.google_refresh_token = google_refresh_token
+        if google_refresh_token:
+            user_gg.google_refresh_token = google_refresh_token
         user_gg.google_token_expires_at = google_token_expires_at
         db.commit()
         db.refresh(user_gg)
@@ -54,3 +49,26 @@ def delete_user_gg(db: Session, user_gg_id: int):
         db.commit()
         return True
     return False
+
+def find_by_google_account(db: Session, email: str):
+    return db.query(Users_gg).filter(Users_gg.email == email).first()
+
+def find_by_id(db: Session, user_id: int):
+    return db.query(Users_gg).filter(Users_gg.id == user_id).first()
+
+
+def find_by_google_id(db: Session, google_id: str):
+    return db.query(Users_gg).filter(Users_gg.google_id == google_id).first()
+
+def getRefreshTokenByGoogleId(db: Session, google_id: str):
+    user_gg = db.query(Users_gg).filter(Users_gg.google_id == google_id).first()
+    if user_gg:
+        return user_gg.google_refresh_token
+    return None
+
+
+def getRefreshTokenByUserId(db: Session, user_id: int):
+    user_gg = db.query(Users_gg).filter(Users_gg.id == user_id).first()
+    if user_gg:
+        return user_gg.google_refresh_token
+    return None

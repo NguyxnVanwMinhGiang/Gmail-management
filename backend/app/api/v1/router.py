@@ -10,3 +10,9 @@ api_router.include_router(
     tags=["Auth User"]
 )
 
+api_router.include_router(
+    mail.router,
+    prefix="/gmail",
+    tags=["Mail Service"]
+)
+

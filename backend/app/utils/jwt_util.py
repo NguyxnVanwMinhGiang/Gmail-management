@@ -57,7 +57,18 @@ def _normalize_bearer_token(token: str) -> str:
 
 
 def get_current_admin(token: str) -> int:
-    payload = jwt.decode(_normalize_bearer_token(token), config.SECRET_KEY_ADMIN, algorithms=["HS256"])
+    try:
+        payload = jwt.decode(_normalize_bearer_token(token), config.SECRET_KEY_ADMIN, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token đã hết hạn"
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token không hợp lệ"
+        )
 
     admin_id_raw = payload.get("user_id")
 
@@ -86,4 +97,44 @@ def get_current_admin(token: str) -> int:
         )
     
     return admin_id
+
+def get_current_user(token: str) -> int:
+    try:
+        payload = jwt.decode(_normalize_bearer_token(token), config.SECRET_KEY_USER, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token đã hết hạn"
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token không hợp lệ"
+        )
+
+    user_id_raw = payload.get("user_id")
+
+    if user_id_raw is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token không có user id"
+        )
+
+    try:
+        user_id = int(user_id_raw)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token có user id không hợp lệ"
+        )
+
+    user_role = payload.get("role")
+
+    if user_role != "user":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorize"
+        )
+    
+    return user_id
 

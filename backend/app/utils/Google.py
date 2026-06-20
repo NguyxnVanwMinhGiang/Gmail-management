@@ -1,15 +1,12 @@
-from datetime import datetime, timedelta
-
 import requests
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
+from datetime import datetime, timedelta
 from fastapi import HTTPException, status
+
+from google.oauth2.credentials import Credentials
 
 from app.core.config import config
 
-
 def callAPToken(code: str):
-    
     response = requests.post(
         "https://oauth2.googleapis.com/token",        
         data={
@@ -62,3 +59,17 @@ def callAPToken(code: str):
         "google_refresh_token": refresh_token,
         "google_token_expires_at": google_token_expires_at
     }
+
+
+def refreshGoogleToken(refresh_token: str):
+    """
+    Tạo đối tượng Credentials từ refresh_token. 
+    Thư viện sẽ tự động refresh access_token khi cần.
+    """
+    return Credentials(
+            token=None,
+            refresh_token=refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=config.GOOGLE_CLIENT_ID,
+            client_secret=config.GOOGLE_CLIENT_SECRET
+        )

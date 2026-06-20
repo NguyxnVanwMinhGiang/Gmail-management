@@ -116,7 +116,7 @@ class GoogleLoginService:
         user = self.google_repository.find_by_google_account(db, email)
 
         if user:
-            self.google_repository.update_user_gg(
+            user = self.google_repository.update_user_gg(
                 db,
                 google_id,
                 full_name,
@@ -124,7 +124,7 @@ class GoogleLoginService:
                 google_token_expires_at
             )
         else:
-            self.google_repository.create_user_gg(
+            user = self.google_repository.create_user_gg(
                 db=db,
                 google_id=google_id,
                 full_name=full_name,
@@ -133,7 +133,7 @@ class GoogleLoginService:
                 google_token_expires_at=google_token_expires_at
             )
         
-        system_jwt_token = generate_jwt_user(google_id, email)
+        system_jwt_token = generate_jwt_user(user.id, email)
 
         return {
             "message": "Login successfully",
