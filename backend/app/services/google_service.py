@@ -4,15 +4,18 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 
 from app.utils.Google import refreshGoogleToken
-from app.repositories.email_repository import add_email_to_database, check_google_message_id
+from app.repositories.email_repository import add_email_to_database, check_google_message_id, get_email_data_by_user_id
 from app.repositories.google_repository import (
     getRefreshTokenByUserId,
     find_by_id,
     find_by_google_id,
 )
 
+
 class GmailService:
-    
+    def __init__(self):
+        pass
+
     def fetch_and_save_emails(self, db: Session, user_id: int, max_results: int = 10):
         # Ưu tiên user nội bộ (id), nhưng vẫn tương thích token cũ đang chứa google_id.
         user_gg = find_by_id(db, user_id)
@@ -75,10 +78,12 @@ class GmailService:
                 )
                 saved_count += 1
 
+            data  = get_email_data_by_user_id(db, user_id, skip=0, limit=max_results)
             return {
                 "message": "Đồng bộ email thành công",
                 "total_fetched": len(messages),
                 "total_new_saved": saved_count,
+                "data": data
             }
         except HttpError as e:
             raise HTTPException(status_code=502, detail=f"Google API error: {str(e)}")
