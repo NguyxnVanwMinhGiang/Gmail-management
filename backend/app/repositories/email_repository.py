@@ -52,11 +52,16 @@ def add_email_to_database(
     return email_entry
 
 
-
+def check_google_message_id(db: Session, user_id: int, gmail_message_id: str) -> bool:
+    existing_email = db.query(Email).filter_by(user_id=user_id, gmail_message_id=gmail_message_id).first()
+    return existing_email is not None
+    
 def get_email_data_by_user_id(db: Session, user_id: int, skip: int, limit: int):
     emails = db.query(Email).filter(Email.user_id == user_id)\
                .order_by(Email.received_at.desc())\
                .offset(skip)\
                .limit(limit)\
                .all()
+
     return emails
+

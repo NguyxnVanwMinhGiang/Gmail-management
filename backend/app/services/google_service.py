@@ -14,6 +14,7 @@ from app.repositories.google_repository import (
 from app.utils.jwt_util import get_current_user
 
 
+
 class GmailService:
     def fetch_and_save_emails(self, db: Session, token: str, max_results: int = 10):
         # 1. Lấy và bóc tách thông tin từ Token
@@ -24,6 +25,15 @@ class GmailService:
 
         # 2. Tìm user trong DB
         user_gg = find_by_google_id(db, token_payload)
+    def __init__(self):
+        pass
+
+    def fetch_and_save_emails(self, db: Session, user_id: int, max_results: int = 10):
+        # Ưu tiên user nội bộ (id), nhưng vẫn tương thích token cũ đang chứa google_id.
+        user_gg = find_by_id(db, user_id)
+        if user_gg is None:
+            user_gg = find_by_google_id(db, str(user_id))
+
 
         if user_gg is None:
             raise HTTPException(
@@ -130,6 +140,7 @@ class GmailService:
             # 7. Trả về kết quả
             data_response = get_email_data_by_user_id(db, user_gg_id, skip=0, limit=max_results)
 
+            data  = get_email_data_by_user_id(db, user_id, skip=0, limit=max_results)
             return {
                 "message": "Đồng bộ email qua giao thức IMAP và mã hóa bảo mật thành công",
                 "total_fetched": len(latest_ids),
@@ -151,3 +162,6 @@ class GmailService:
                 try: mail.logout()
                 except: pass
             raise HTTPException(status_code=500, detail=f"Lỗi hệ thống: {str(e)}")
+
+            raise HTTPException(status_code=500, detail=f"Lỗi khi xử lý email: {str(e)}")
+
