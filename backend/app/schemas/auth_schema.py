@@ -25,3 +25,7 @@ class RegisterRequestAdmin(BaseModel):
     password: str
     full_name: str
     permissions: dict[str, bool]
+
+class E2EEKeysUpdate(BaseModel):
+    public_key: str
+    encrypted_private_key: str

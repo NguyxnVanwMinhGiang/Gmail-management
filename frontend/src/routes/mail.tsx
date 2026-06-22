@@ -14,11 +14,11 @@ export const Route = createFileRoute('/mail')({
       });
     }
     // Nếu người dùng truy cập /mail, tự động chuyển hướng đến /mail/inbox
-    // if (location.pathname === "/mail") {
-    //   throw redirect({
-    //     to: "/mail/inbox",
-    //   });
-    // }
+    if (location.pathname === "/mail") {
+      throw redirect({
+        to: "/mail/inbox",
+      });
+    }
   },
   component: SideBar,
 })

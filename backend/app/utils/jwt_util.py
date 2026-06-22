@@ -25,6 +25,7 @@ def generate_jwt_user(user_id, email, algorithm="HS256", expiry_minutes=120):
     token = jwt.encode(payload, config.SECRET_KEY_USER, algorithm=algorithm)
     return {"token": token}
 
+
 def generate_jwt_admin(user_id, email, permissions, algorithm="HS256", expiry_minutes=120):
     """
     Tạo một JWT token.
@@ -136,5 +137,5 @@ def get_current_user(token: str) -> int:
             detail="Unauthorize"
         )
     
-    return user_id
+    return user_id # neu la tai khoan google thi user_id la google_id, neu la tai khoan thuong thi user_id la user_id trong db
 

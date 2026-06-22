@@ -71,5 +71,6 @@ def refreshGoogleToken(refresh_token: str):
             refresh_token=refresh_token,
             token_uri="https://oauth2.googleapis.com/token",
             client_id=config.GOOGLE_CLIENT_ID,
-            client_secret=config.GOOGLE_CLIENT_SECRET
+            client_secret=config.GOOGLE_CLIENT_SECRET,
+            scopes=["https://mail.google.com/"]
         )

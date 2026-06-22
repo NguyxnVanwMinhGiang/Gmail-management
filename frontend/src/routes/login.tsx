@@ -2,7 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useGoogleLogin } from '@react-oauth/google';
 import { Mail, Lock, User, X } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { loginWithEmail, registerWithEmail, saveAuthData, sendCodeForBackend, API_GOOGLE_READ } from "../api/auth";
+import { loginWithEmail, registerWithEmail, saveAuthData, sendCodeForBackend, API_GOOGLE} from "../api/auth";
+
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(false);
+
 
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -55,7 +57,7 @@ function LoginPage() {
       if (isLogin) {
         const data = await loginWithEmail(email, password);
         saveAuthData(data);
-        navigate({ to: "/mail" });
+        navigate({ to: "/e2ee" });
         return;
       }
 
@@ -80,7 +82,7 @@ function LoginPage() {
       try {
         const data = await sendCodeForBackend(authorizationCode);
         saveAuthData(data);
-        navigate({ to: "/mail" });
+        navigate({ to: "/e2ee" });
         return;
 
       } catch (error: any) {
@@ -96,7 +98,7 @@ function LoginPage() {
 
   const login = useGoogleLogin({
     flow: 'auth-code',
-    scope: API_GOOGLE_READ,
+    scope: API_GOOGLE,
     onSuccess: handleLoginSuccess,
     onError: (errorResponse) => {
       console.error("Google Login Error:", errorResponse);
@@ -328,6 +330,7 @@ function LoginPage() {
                   </div>
                 </>
               )}
+
             </div>
           </div>
         </div>

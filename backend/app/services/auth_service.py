@@ -2,10 +2,10 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.auth_schema import LoginRequestAdmin, RegisterRequest, LoginRequest, RegisterRequestAdmin, GoogleLoginRequest
+from app.schemas.auth_schema import E2EEKeysUpdate, LoginRequestAdmin, RegisterRequest, LoginRequest, RegisterRequestAdmin, GoogleLoginRequest
 from app.repositories import user_repository, admin_repository, google_repository
 from app.utils.hash_util import hash_password, verify_password
-from app.utils.jwt_util import generate_jwt_user, generate_jwt_admin, get_current_admin
+from app.utils.jwt_util import generate_jwt_user, generate_jwt_admin, get_current_admin, get_current_user
 
 from app.utils.Google import callAPToken
 
@@ -133,7 +133,7 @@ class GoogleLoginService:
                 google_token_expires_at=google_token_expires_at
             )
         
-        system_jwt_token = generate_jwt_user(user.id, email)
+        system_jwt_token = generate_jwt_user(user.google_id, email)
 
         return {
             "message": "Login successfully",
@@ -144,4 +144,31 @@ class GoogleLoginService:
                 "full_name": full_name,
                 "role": "user"
             }
+        }
+    
+    def save_e2ee_keys(self, keys_data: E2EEKeysUpdate, token, db: Session):
+        user_id = get_current_user(token)
+        
+        user = self.google_repository.find_by_google_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+            
+        user.public_key = keys_data.public_key
+        user.encrypted_private_key = keys_data.encrypted_private_key
+        db.commit()
+        
+        return {"message": "Đã lưu bộ khóa E2EE an toàn."}
+
+    def get_e2ee_keys(self, token: str, db: Session):
+        user_id = get_current_user(token)
+    
+        user = self.google_repository.find_by_google_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+            
+        # Trả về khóa nếu đã thiết lập, hoặc null nếu là tài khoản mới
+        return {
+            "has_keys": bool(user.encrypted_private_key),
+            "public_key": user.public_key,
+            "encrypted_private_key": user.encrypted_private_key
         }

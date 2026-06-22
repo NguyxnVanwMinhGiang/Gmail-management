@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MailRouteImport } from './routes/mail'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as E2eeRouteImport } from './routes/e2ee'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MailInboxRouteImport } from './routes/mail.inbox'
 
@@ -22,6 +23,11 @@ const MailRoute = MailRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const E2eeRoute = E2eeRouteImport.update({
+  id: '/e2ee',
+  path: '/e2ee',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -37,12 +43,14 @@ const MailInboxRoute = MailInboxRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/e2ee': typeof E2eeRoute
   '/login': typeof LoginRoute
   '/mail': typeof MailRouteWithChildren
   '/mail/inbox': typeof MailInboxRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/e2ee': typeof E2eeRoute
   '/login': typeof LoginRoute
   '/mail': typeof MailRouteWithChildren
   '/mail/inbox': typeof MailInboxRoute
@@ -50,20 +58,22 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/e2ee': typeof E2eeRoute
   '/login': typeof LoginRoute
   '/mail': typeof MailRouteWithChildren
   '/mail/inbox': typeof MailInboxRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/mail' | '/mail/inbox'
+  fullPaths: '/' | '/e2ee' | '/login' | '/mail' | '/mail/inbox'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/mail' | '/mail/inbox'
-  id: '__root__' | '/' | '/login' | '/mail' | '/mail/inbox'
+  to: '/' | '/e2ee' | '/login' | '/mail' | '/mail/inbox'
+  id: '__root__' | '/' | '/e2ee' | '/login' | '/mail' | '/mail/inbox'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  E2eeRoute: typeof E2eeRoute
   LoginRoute: typeof LoginRoute
   MailRoute: typeof MailRouteWithChildren
 }
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/e2ee': {
+      id: '/e2ee'
+      path: '/e2ee'
+      fullPath: '/e2ee'
+      preLoaderRoute: typeof E2eeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -113,6 +130,7 @@ const MailRouteWithChildren = MailRoute._addFileChildren(MailRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  E2eeRoute: E2eeRoute,
   LoginRoute: LoginRoute,
   MailRoute: MailRouteWithChildren,
 }
