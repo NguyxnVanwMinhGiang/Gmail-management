@@ -1,10 +1,12 @@
 // src/routes/mail.inbox.tsx
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useRef, startTransition } from "react";
+import { useQueryClient } from '@tanstack/react-query'
+import { useState, useEffect, useRef, startTransition, useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { getInbox, type EmailItem } from "../api/gmail";
+import { getBody, getInbox, asyncGmail, type EmailItem } from "../api/gmail";
 import * as openpgp from 'openpgp';
-import { decryptPGPText } from "../api/openpgp"; // Chỉ cần import hàm decrypt chuỗi lẻ
+import { decryptPGPText } from "../api/openpgp";
+import IframeEmailViewer from "../components/mail/IframeRenderBodyMail";
 
 import {
   Trash2,
@@ -23,8 +25,9 @@ type DecryptedEmailItem = EmailItem & {
 function Index() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<number>(0);
+  const queryClient = useQueryClient();
 
-  // Cache để tránh giải mã lại cùng một email mỗi lần query refetch hoặc component render lại.
+  // Cache để tránh giải mã/gọi API lại cùng một email mỗi lần query refetch hoặc component render lại.
   const decryptedHeaderCacheRef = useRef<Map<string, DecryptedEmailItem>>(new Map());
   const decryptedBodyCacheRef = useRef<Map<string, { html: string; text: string }>>(new Map());
 
@@ -34,6 +37,30 @@ function Index() {
   // 2. STATE LƯU TRỮ NỘI DUNG CHI TIẾT ĐÃ GIẢI MÃ CỦA EMAIL ĐANG XEM
   const [activeBody, setActiveBody] = useState<{ html: string; text: string } | null>(null);
   const [isDecryptingBody, setIsDecryptingBody] = useState<boolean>(false);
+
+  useEffect(() => {
+    // 1. Hàm gọi API đồng bộ ngầm
+    const syncEmailsSilently = async () => {
+      try {
+        // Gọi API sync (chỉ lấy 20 email mới nhất trên IMAP để check)
+        await asyncGmail(20);
+        // QUAN TRỌNG: Sau khi sync xong, báo cho React Query tải lại danh sách Inbox
+        // Hành động này sẽ tự động trigger lại hàm getInbox trong useInfiniteQuery của bạn
+        queryClient.invalidateQueries({ queryKey: ["emails", "inbox"] });
+        console.log("Đồng bộ hoàn tất và đã cập nhật giao diện!");
+      } catch (error) {
+        console.error("Lỗi đồng bộ ngầm:", error);
+      }
+    };
+
+    // 2. Thiết lập chạy lặp lại mỗi 5 phút (300,000 ms)
+    const intervalId = setInterval(() => {
+      syncEmailsSilently();
+    }, 300000);
+
+    // 3. Dọn dẹp khi user tắt component
+    return () => clearInterval(intervalId);
+  }, [queryClient]);
 
   // Cấu hình useInfiniteQuery lấy dữ liệu gốc (mã hóa) từ Server
   const {
@@ -47,18 +74,33 @@ function Index() {
     queryKey: ["inbox"],
     queryFn: ({ pageParam = 1 }) => getInbox(pageParam as number, 20),
     initialPageParam: 1,
+    refetchInterval: 300000,
     getNextPageParam: (lastPage, allPages) => {
       return lastPage.length === 20 ? allPages.length + 1 : undefined;
     },
-    staleTime: 1000 * 60,
+    staleTime: 2000 * 60, // coi du lieu la "fresh" trong 1 phut, tranh goi lai API lien tuc
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
-  const rawEmails = data?.pages.flat() || [];
+  const rawEmails = useMemo(() => {
+    return data?.pages.flat() || [];
+  }, [data]);
+
   const currentMailHeader = decryptedHeaders[selected] ?? null;
   const currentRawMail = rawEmails[selected] ?? null;
   const currentMailKey = currentRawMail ? String(currentRawMail.id ?? currentRawMail.gmail_message_id) : null;
 
-  // EFFECT 1: CHỈ GIẢI MÃ TIÊU ĐỀ & SNIPPET CHO DANH SÁCH BÊN TRÁI (Cực kỳ nhanh)
+  const handleSelectMail = (index: number) => {
+    setSelected(index);
+    setDecryptedHeaders((currentHeaders) =>
+      currentHeaders.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, is_read: true } : item
+      )
+    );
+  };
+
+  // EFFECT 1: CHỈ GIẢI MÃ TIÊU ĐỀ & SNIPPET CHO DANH SÁCH BÊN TRÁI
   useEffect(() => {
     let isCancelled = false;
 
@@ -77,7 +119,6 @@ function Index() {
       try {
         const privateKeyObj = await openpgp.readPrivateKey({ armoredKey });
 
-        // Chỉ lặp giải mã các trường phục vụ hiển thị danh sách (không giải mã body_text/html)
         const updatedList = await Promise.all(
           rawEmails.map(async (email) => {
             const cacheKey = String(email.id ?? email.gmail_message_id);
@@ -117,12 +158,12 @@ function Index() {
   }, [rawEmails, navigate]);
 
 
-  // EFFECT 2: CHỈ GIẢI MÃ NỘI DUNG CHI TIẾT (BODY) KHI NGƯỜI DÙNG CLICK CHỌN THƯ
+  // EFFECT 2: GỌI API LẤY NỘI DUNG VÀ GIẢI MÃ KHI NGƯỜI DÙNG CLICK CHỌN THƯ
   useEffect(() => {
     let isCancelled = false;
 
-    const decryptCurrentBody = async () => {
-      if (!currentRawMail || !currentMailKey) {
+    const fetchAndDecryptBody = async () => {
+      if (!currentMailKey) {
         startTransition(() => setActiveBody(null));
         return;
       }
@@ -138,12 +179,24 @@ function Index() {
 
       setIsDecryptingBody(true);
       try {
+        const emailId = Number(currentMailKey);
+
+        // Gọi API lấy raw body từ server (trả về object duy nhất theo API mới)
+        const rawBodyData = await getBody(emailId);
+
+        if (!rawBodyData) {
+          throw new Error("Không lấy được dữ liệu chi tiết thư");
+        }
+
+        // Truy cập trực tiếp thay vì bóc mảng [0]
+        const rawHTML: string = rawBodyData.body_html || "";
+        const rawText: string = rawBodyData.body_text || "";
+
         const privateKeyObj = await openpgp.readPrivateKey({ armoredKey });
 
-        // Tiến hành giải mã cục bộ duy nhất phần thân của email này
         const [bodyHtml, bodyText] = await Promise.all([
-          decryptPGPText(currentRawMail.body_html ?? "", privateKeyObj),
-          decryptPGPText(currentRawMail.body_text ?? "", privateKeyObj)
+          decryptPGPText(rawHTML, privateKeyObj),
+          decryptPGPText(rawText, privateKeyObj)
         ]);
 
         const decryptedBody = {
@@ -157,9 +210,12 @@ function Index() {
           startTransition(() => setActiveBody(decryptedBody));
         }
       } catch (err) {
-        console.error("Lỗi giải mã nội dung chi tiết thư:", err);
+        console.error("Lỗi khi tải/giải mã nội dung chi tiết thư:", err);
         if (!isCancelled) {
-          startTransition(() => setActiveBody({ html: "", text: "--- Lỗi: Không thể giải mã nội dung chi tiết thư ---" }));
+          startTransition(() => setActiveBody({
+            html: "",
+            text: "--- Lỗi: Không thể tải hoặc giải mã nội dung chi tiết thư ---"
+          }));
         }
       } finally {
         if (!isCancelled) {
@@ -168,12 +224,11 @@ function Index() {
       }
     };
 
-    decryptCurrentBody();
+    fetchAndDecryptBody();
     return () => {
       isCancelled = true;
     };
-  }, [currentMailKey, currentRawMail]);
-
+  }, [currentMailKey]);
 
   // Logic cuộn tải thêm trang
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -215,10 +270,14 @@ function Index() {
             decryptedHeaders.map((item, index) => (
               <div
                 key={item.id || item.gmail_message_id}
-                onClick={() => setSelected(index)}
+                onClick={() => handleSelectMail(index)}
                 className={`p-3 cursor-pointer transition-colors ${selected === index
-                  ? "bg-[oklch(0.24_0.02_255)] text-white"
-                  : "hover:bg-[oklch(0.2_0.01_260)]"
+                  ? item.is_read
+                    ? "bg-[oklch(0.2_0.01_260)] text-white"
+                    : "bg-[oklch(0.28_0.03_255)] text-white shadow-[inset_0_0_0_1px_oklch(0.42_0.04_255)]"
+                  : item.is_read
+                    ? "hover:bg-[oklch(0.2_0.01_260)]"
+                    : "bg-[oklch(0.28_0.03_255)] hover:bg-[oklch(0.3_0.03_255)] text-white shadow-[inset_0_0_0_1px_oklch(0.42_0.04_255)]"
                   }`}
               >
                 <div className="flex justify-between items-start mb-1">
@@ -226,7 +285,7 @@ function Index() {
                     {item.email_from?.split("<")[0].trim() || "Ẩn danh"}
                   </span>
                   <span className="text-xs text-[oklch(0.5_0.01_260)] whitespace-nowrap">
-                    {item.sent_at ? new Date(item.sent_at).toLocaleDateString("vi-VN") : ""}
+                    {item.received_at ? new Date(item.received_at).toLocaleDateString("vi-VN") : ""}
                   </span>
                 </div>
                 <div className={`text-xs truncate mb-1 ${!item.is_read ? "font-semibold text-[oklch(0.85_0.02_255)]" : ""}`}>
@@ -248,9 +307,9 @@ function Index() {
       </div>
 
       {/* CỘT PHẢI: NỘI DUNG CHI TIẾT EMAIL */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full bg-[oklch(0.14_0.01_260)]">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 h-screen bg-[oklch(0.14_0.01_260)]">
         {currentMailHeader ? (
-          <div className="flex flex-col min-h-0 h-full overflow-hidden">
+          <div className="flex flex-col min-h-0 h-screen overflow-hidden">
             {/* Thanh công cụ */}
             <div className="p-2 border-b border-[oklch(0.24_0.01_260)] flex gap-2">
               <button className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Reply className="w-4 h-4" /></button>
@@ -261,48 +320,40 @@ function Index() {
             </div>
 
             {/* Khung nội dung */}
-            <div className="p-6 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-              <h1 className="text-xl font-bold text-white mb-4">{currentMailHeader.subject || "(Không có tiêu đề)"}</h1>
+            <div className="p-3 pt-1 pb-0 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+              <h1 className="text-xl font-bold text-white mb-4">Tiêu đề: {currentMailHeader.subject || "(Không có tiêu đề)"}</h1>
 
               <div className="flex justify-between border-b border-[oklch(0.2_0.01_260)] pb-4 mb-4 text-sm">
                 <div>
-                  <div className="text-white font-medium">{currentMailHeader.email_from}</div>
+                  <div className="text-white font-medium flex justify-between gap-7 items-center">
+                      Từ: {currentMailHeader.email_from}
+                  </div>
+
                   <div className="text-xs text-[oklch(0.5_0.01_260)] mt-0.5">Tới: {currentMailHeader.email_to || "me"}</div>
                 </div>
                 <div className="text-[oklch(0.5_0.01_260)] text-xs text-right">
-                  {currentMailHeader.sent_at ? new Date(currentMailHeader.sent_at).toLocaleString("vi-VN") : ""}
+                  {currentMailHeader.received_at ? new Date(currentMailHeader.received_at).toLocaleString("vi-VN") : ""}
                 </div>
               </div>
 
               {/* KHU VỰC HIỂN THỊ NỘI DUNG HOẶC LOADING KHI ĐANG GIẢI MÃ CHI TIẾT */}
-              <div className="text-white text-sm leading-relaxed email-content mb-8 min-h-25 max-w-full overflow-x-auto wrap-break-word whitespace-pre-wrap [&_img]:max-w-full [&_img]:h-auto [&_table]:max-w-full [&_pre]:whitespace-pre-wrap [&_pre]:wrap-break-word">
+              <div className="text-white text-sm leading-relaxed email-content mb-8 flex-1 w-full flex flex-col">
                 {isDecryptingBody ? (
                   <div className="flex items-center gap-2 text-[oklch(0.5_0.01_260)] text-xs animate-pulse">
-                    🔒 Đang giải mã nội dung bảo mật bằng khóa cấp 2...
+                    🔒 Đang tải và giải mã nội dung bảo mật bằng khóa cấp 2...
                   </div>
                 ) : activeBody ? (
                   activeBody.html ? (
-                    <div className="max-w-full" dangerouslySetInnerHTML={{ __html: activeBody.html }} />
+                    // SỬA Ở ĐÂY: Thêm flex-1, w-full, và min-h-[65vh] (hoặc min-h-[500px])
+                    <div className="flex-1 w-full min-h-[77vh] rounded-md overflow-hidden bg-white">
+                      <IframeEmailViewer htmlContent={activeBody.html} />
+                    </div>
                   ) : (
-                    <p className="whitespace-pre-line">{activeBody.text || currentMailHeader.snippet}</p>
+                    <p className="whitespace-pre-line">{activeBody.text}</p>
                   )
                 ) : null}
               </div>
 
-              {/* Tệp đính kèm */}
-              {/* <div className="rounded-lg border border-[oklch(0.28_0.01_260)] bg-[oklch(0.2_0.01_260)] p-4 mt-auto">
-                <div className="flex items-center gap-2 text-sm font-medium text-white mb-2">
-                  <Paperclip className="w-4 h-4" /> Tệp đính kèm (Demo)
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {["bao-cao-q3.pdf", "lich-hop.ics"].map((f) => (
-                    <div key={f} className="flex items-center gap-2 px-3 py-2 rounded border border-[oklch(0.28_0.01_260)] bg-[oklch(0.16_0.01_260)] text-xs">
-                      <Files className="w-4 h-4 text-[oklch(0.6_0.15_255)]" />
-                      <span className="truncate">{f}</span>
-                    </div>
-                  ))}
-                </div>
-              </div> */}
             </div>
           </div>
         ) : (

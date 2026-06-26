@@ -1,8 +1,7 @@
 import { createFileRoute, Outlet , redirect } from '@tanstack/react-router'
-import { Cloud, MoreHorizontal, Plus} from 'lucide-react'
+import { Cloud, RefreshCw, Plus} from 'lucide-react'
 import Account from '../components/mail/Account'
-
-
+import { asyncGmail } from '../api/gmail'
 
 export const Route = createFileRoute('/mail')({
   beforeLoad: () => {
@@ -25,6 +24,16 @@ export const Route = createFileRoute('/mail')({
 
 
 function SideBar() {
+  const handleSyncEmails = async () => {
+    try {
+      await asyncGmail(20);
+      alert("Đồng bộ thành công!");
+    } catch (error) {
+      console.error("Lỗi đồng bộ:", error);
+      alert("Đồng bộ thất bại!");
+    }
+  };
+
   return (
     // Sử dụng h-screen và overflow-hidden ở gốc để cố định khung app không bị cuộn toàn trang
     <div className="flex h-screen w-screen overflow-hidden bg-[oklch(0.16_0.01_260)] text-[oklch(0.92_0.01_260)] font-sans text-[13px]">
@@ -35,7 +44,11 @@ function SideBar() {
           <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[oklch(0.55_0.18_255)] hover:bg-[oklch(0.6_0.18_255)] text-white text-xs font-medium shadow-sm">
             <Plus className="w-3.5 h-3.5" /> Thư mới
           </button>
-          <button className="p-1.5 rounded hover:bg-[oklch(0.22_0.01_260)] text-[oklch(0.7_0.01_260)]"><MoreHorizontal className="w-4 h-4" /></button>
+          <button onClick={handleSyncEmails}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[oklch(0.55_0.18_255)] hover:bg-[oklch(0.6_0.18_255)] text-white text-xs font-medium shadow-sm">
+            <RefreshCw className="w-3.5 h-3.5" /> Đồng bộ
+          </button>
+        
         </div>
 
         <div className="flex-1 overflow-y-auto px-1.5 pb-2">

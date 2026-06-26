@@ -1,6 +1,7 @@
 import gnupg
 import os
 from email.header import decode_header
+from email.utils import parsedate_to_datetime
 
 def get_email_full_bodies(msg) -> tuple[str, str]:
     """Trích xuất đầy đủ nội dung text và html của email"""
@@ -96,3 +97,45 @@ def get_email_snippet(msg) -> str:
     # Xóa bớt khoảng trắng dư thừa, xuống dòng và cắt chuỗi
     snippet_cleaned = " ".join(snippet.split())
     return snippet_cleaned[:200]
+
+
+
+def extract_email_metadata(mail, msg, email_id):
+    sent_at = None
+    received_at = None
+
+    date_header = msg.get("Date")
+
+    if date_header:
+        try:
+            dt = parsedate_to_datetime(date_header)
+
+            if dt.tzinfo:
+                dt = dt.replace(tzinfo=None)
+
+            sent_at = dt
+            received_at = dt
+
+        except Exception:
+            pass
+
+    is_read = False
+    is_starred = False
+    is_deleted = False
+
+    status, flag_data = mail.fetch(email_id, "(FLAGS)")
+
+    if status == "OK":
+        flags = flag_data[0].decode()
+
+        is_read = "\\Seen" in flags
+        is_starred = "\\Flagged" in flags
+        is_deleted = "\\Deleted" in flags
+
+    return {
+        "sent_at": sent_at,
+        "received_at": received_at,
+        "is_read": is_read,
+        "is_starred": is_starred,
+        "is_deleted": is_deleted,
+    }

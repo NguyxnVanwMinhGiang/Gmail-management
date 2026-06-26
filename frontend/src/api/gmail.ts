@@ -19,9 +19,32 @@ export type EmailItem = {
   received_at?: string | null;
 };
 
+export type EmailBody = {
+  body_text: string;
+  body_html: string;
+}
+
 const API_URL = "http://127.0.0.1:8000/api/v1"; // Thay bằng URL Backend của bạn
 
-export const getInbox = async (page: number = 1, limit: number = 30): Promise<EmailItem[]> => {
+export const asyncGmail = async (limit: number) => {
+  const token = localStorage.getItem("accessToken");
+  
+  if (!token) {
+    throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
+  }
+
+  const response = await axios.get(`${API_URL}/gmail/sync-emails`, {
+    params: { limit },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return response.status + "message: success"
+    
+}
+
+export const getInbox = async (page: number, limit: number): Promise<EmailItem[]> => {
   // Lấy hệ thống token bạn lưu lúc đăng nhập (ví dụ lưu trong localStorage)
   const token = localStorage.getItem("accessToken");
 
@@ -29,13 +52,29 @@ export const getInbox = async (page: number = 1, limit: number = 30): Promise<Em
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.get(`${API_URL}/gmail/sync-emails`, {
+  const response = await axios.get(`${API_URL}/gmail/inbox`, {
     params: { page, limit },
+    headers: {
+      Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
+    },
+  });
+  // Giả sử Backend trả về object có dạng: { message: "...", data: [...] } hoặc trực tiếp mảng
+  return response.data.data || response.data;
+};
+
+export const getBody = async (gmail_message_id: number): Promise<EmailBody> => {
+  const token = localStorage.getItem("accessToken");
+  console.log("id email: ", gmail_message_id)
+  if (!token) {
+    throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
+  }
+
+  const response = await axios.get(`${API_URL}/gmail/id/${gmail_message_id}`, {
     headers: {
       Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
     },
   });
 
   // Giả sử Backend trả về object có dạng: { message: "...", data: [...] } hoặc trực tiếp mảng
-  return response.data.data || response.data;
+  return response.data?.data || response.data;
 };

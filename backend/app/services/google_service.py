@@ -4,19 +4,19 @@ import google.auth.transport.requests
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 
-from app.core.security import get_email_snippet, get_email_full_bodies, encrypt_with_pgp_public_key, decode_imap_header
+from app.core.security import extract_email_metadata, get_email_snippet, get_email_full_bodies, encrypt_with_pgp_public_key, decode_imap_header
 from app.utils.Google import refreshGoogleToken
-from app.repositories.email_repository import add_email_to_database, check_google_message_id, get_email_data_by_user_id
+from app.repositories.email_repository import add_email_to_database, check_google_message_id, count_email_by_user, get_body_email, get_email_data_by_user_id
 from app.repositories.google_repository import (
+    get_id_by_google_id,
     getRefreshTokenByUserId,
     find_by_google_id,
 )
 from app.utils.jwt_util import get_current_user
 
 
-
 class GmailService:
-    def fetch_and_save_emails(self, db: Session, token: str, max_results: int = 10):
+    def fetch_and_save_emails(self, db: Session, token: str, max_results: int):
         # 1. Lấy và bóc tách thông tin từ Token
         token_payload = get_current_user(token)
 
@@ -25,21 +25,13 @@ class GmailService:
 
         # 2. Tìm user trong DB
         user_gg = find_by_google_id(db, token_payload)
-    def __init__(self):
-        pass
-
-    def fetch_and_save_emails(self, db: Session, user_id: int, max_results: int = 10):
-        # Ưu tiên user nội bộ (id), nhưng vẫn tương thích token cũ đang chứa google_id.
-        user_gg = find_by_id(db, user_id)
-        if user_gg is None:
-            user_gg = find_by_google_id(db, str(user_id))
-
 
         if user_gg is None:
             raise HTTPException(
                 status_code=404,
                 detail="Không tìm thấy tài khoản Google liên kết với người dùng hiện tại.",
             )
+
 
         # KIỂM TRA KHÓA CÔNG KHAI (E2EE Public Key)
         user_public_key = user_gg.public_key
@@ -83,12 +75,14 @@ class GmailService:
             if not mail_ids:
                 mail.logout()
                 return {"message": "Không có email nào.", "total_fetched": 0, "total_new_saved": 0}
+            
+            total_emails = len(mail_ids)
+            start_idx = max(0, total_emails - max_results)
 
-            latest_ids = mail_ids[-max_results:]
+            target_ids = mail_ids[start_idx:total_emails]
             saved_count = 0
-
             # 6. Lặp qua và lưu trữ
-            for num in reversed(latest_ids):
+            for num in reversed(target_ids):
                 status, msg_data = mail.fetch(num, '(RFC822)')
                 
                 for response_part in msg_data:
@@ -108,6 +102,9 @@ class GmailService:
                         receiver = decode_imap_header(msg.get('To', email_address))
                         raw_snippet = get_email_snippet(msg)
                         raw_body_text, raw_body_html = get_email_full_bodies(msg)
+
+                        # --- TRÍCH XUẤT THÔNG TIN METADATA ---
+                        metadata = extract_email_metadata(mail, msg, num)
                         
                         raw_thread_id = msg.get('In-Reply-To', raw_message_id)
                         thread_id = raw_thread_id.strip('<>') if raw_thread_id else gmail_msg_id
@@ -131,21 +128,22 @@ class GmailService:
                             body_text=encrypted_body_text, # Đã mã hóa
                             body_html=encrypted_body_html, # Đã mã hóa
                             snippet=encrypted_snippet, # Đã mã hóa
+                            sent_at=metadata["sent_at"],
+                            received_at=metadata["received_at"],
+                            is_read=metadata["is_read"],
+                            is_starred=metadata["is_starred"],
+                            is_deleted=metadata["is_deleted"],
                         )
                         saved_count += 1
 
             mail.close()
             mail.logout()
 
-            # 7. Trả về kết quả
-            data_response = get_email_data_by_user_id(db, user_gg_id, skip=0, limit=max_results)
 
-            data  = get_email_data_by_user_id(db, user_id, skip=0, limit=max_results)
             return {
                 "message": "Đồng bộ email qua giao thức IMAP và mã hóa bảo mật thành công",
-                "total_fetched": len(latest_ids),
+                "total_fetched": len(target_ids),
                 "total_new_saved": saved_count,
-                "data": data_response
             }
 
         except imaplib.IMAP4.error as e:
@@ -162,6 +160,55 @@ class GmailService:
                 try: mail.logout()
                 except: pass
             raise HTTPException(status_code=500, detail=f"Lỗi hệ thống: {str(e)}")
+        
 
-            raise HTTPException(status_code=500, detail=f"Lỗi khi xử lý email: {str(e)}")
+    def get_email_body(self, db: Session, token: str, email_id: int):
+        token_payload = get_current_user(token)
+        user = find_by_google_id(db, token_payload)
 
+        if not user:
+            raise HTTPException(status_code=401, detail="Token không hợp lệ")
+
+        email_content = get_body_email(db, user.id, email_id)
+        
+        if email_content is None:
+            raise HTTPException(status_code=404, detail="Không tìm thấy email với ID đã cho.")
+
+        return {
+            "email_id": email_id,
+            "body_text": email_content[0],
+            "body_html": email_content[1]
+        }
+    
+    def get_inbox_emails(self, db: Session, token: str, skip: int, limit: int):
+        token_payload = get_current_user(token)
+
+        if not token_payload:
+            raise HTTPException(status_code=401, detail="Token không hợp lệ")
+        
+        user = find_by_google_id(db, token_payload)
+
+        print(f"User ID extracted from token: {user.id}")  # Debugging line
+
+        
+
+        data_response = get_email_data_by_user_id(db, user.id, skip=skip, limit=limit)
+
+        if not data_response:
+            return {"message": "Không có email nào trong hòm thư.", "data": []}
+        
+        emails = []
+        for email_data in data_response:
+            emails.append({
+                "id": email_data.id,
+                "subject": email_data.subject,
+                "email_from": email_data.email_from,
+                "email_to": email_data.email_to,
+                "snippet": email_data.snippet,
+                "received_at": email_data.received_at,
+                "is_read": email_data.is_read,
+                "is_starred": email_data.is_starred
+            })
+        return {
+            "data": emails
+        }

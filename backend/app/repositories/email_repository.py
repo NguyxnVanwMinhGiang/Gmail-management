@@ -52,16 +52,42 @@ def add_email_to_database(
     return email_entry
 
 
-def check_google_message_id(db: Session, user_id: int, gmail_message_id: str) -> bool:
-    existing_email = db.query(Email).filter_by(user_id=user_id, gmail_message_id=gmail_message_id).first()
-    return existing_email is not None
-    
 def get_email_data_by_user_id(db: Session, user_id: int, skip: int, limit: int):
-    emails = db.query(Email).filter(Email.user_id == user_id)\
-               .order_by(Email.received_at.desc())\
-               .offset(skip)\
-               .limit(limit)\
-               .all()
+    return db.query(
+        Email.id,
+        Email.subject, 
+        Email.email_from, 
+        Email.email_to, 
+        Email.snippet, 
+        Email.received_at, 
+        Email.is_read, 
+        Email.is_starred
+    ).filter(
+        Email.user_id == user_id
+    ).order_by(
+        Email.received_at.desc()
+    ).offset(
+        skip
+    ).limit(
+        limit
+    ).all()
 
-    return emails
+def get_body_email(db: Session, user_id: int, email_id: int):
+    # 1. Query toàn bộ đối tượng Email thay vì chỉ lấy 2 cột
+    email = db.query(Email).filter(Email.user_id == user_id, Email.id == email_id).first()
+    
+    if not email:
+        return None
+    
+    # 2. Kiểm tra và cập nhật trên biến 'email' (instance), KHÔNG phải class 'Email'
+    if not email.is_read:
+        email.is_read = True 
+        db.commit()
+        db.refresh(email)  
 
+    return email.body_text, email.body_html
+
+def count_email_by_user(db: Session, user_id: int) -> int:
+    return db.query(Email).filter(
+        Email.user_id == user_id
+    ).count()

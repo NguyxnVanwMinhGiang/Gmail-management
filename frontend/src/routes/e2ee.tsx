@@ -63,7 +63,7 @@ function E2EESetup() {
 
       // Mở khóa luôn cho phiên hiện tại
       const unlockedKey = await PGPService.unlockPrivateKey(encryptedPrivateKey, passphrase);
-      sessionStorage.setItem('unlocked_private_key', unlockedKey.armor()); // Lưu tạm vào Session
+      sessionStorage.setItem('unlocked_private_key', unlockedKey.armor()); 
 
       navigate({ to: "/mail/inbox" }); // Vào hòm thư
     } catch (e) {

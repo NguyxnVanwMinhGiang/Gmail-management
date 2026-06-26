@@ -77,7 +77,6 @@ function LoginPage() {
   const handleLoginSuccess = async (tokenResponse: Omit<import('@react-oauth/google').CodeResponse, "error" | "error_description" | "error_uri">) => {
     if ('code' in tokenResponse && tokenResponse.code) {
       const authorizationCode: string = tokenResponse.code;
-      console.log("Mã code nhận được từ Google:", authorizationCode);
       setLoading(true);
       try {
         const data = await sendCodeForBackend(authorizationCode);
