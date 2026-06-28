@@ -1,29 +1,24 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState} from "react";
-import {Trash2, Search, Reply, Forward, Star} from "lucide-react";
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react';
+import { Trash2, Search, Reply, Forward, Star } from "lucide-react";
 import IframeEmailViewer from "../components/mail/IframeRenderBodyMail";
 
-import {useDecryptedBody} from "../hooks/useDecryptedBody";
-import {useInboxQuery} from "../hooks/useInboxQuery";
-import {useDecryptedHeaders} from "../hooks/useDecryptedHeaders";
-import {useMailActions} from "../hooks/useMailActions";
+import { useDecryptedBody } from "../hooks/useDecryptedBody";
+import { useTrashQuery } from "../hooks/useInboxQuery";
+import { useDecryptedHeaders } from "../hooks/useDecryptedHeaders";
+import { useMailActions } from "../hooks/useMailActions";
 
+export const Route = createFileRoute('/mail/sent')({
+  component: Sent,
+})
 
-
-export const Route = createFileRoute("/mail/inbox")({
-  component: Index,
-});
-
-function Index() {
+function Sent() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<number>(0);
 
-  // 1. Gọi Data
-  const { rawEmails, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInboxQuery();
-  // 2. Giải mã Header
-  const { decryptedHeaders, setDecryptedHeaders } = useDecryptedHeaders(rawEmails, navigate);
+  const { rawEmails, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useTrashQuery();
 
-  // 3. Xử lý logic chọn mail
+  const { decryptedHeaders, setDecryptedHeaders } = useDecryptedHeaders(rawEmails, navigate);
   const currentMailHeader = decryptedHeaders[selected] ?? null;
   const currentRawMail = rawEmails[selected] ?? null;
   const currentMailKey = currentRawMail ? String(currentRawMail.gmail_message_id) : null;
@@ -136,7 +131,7 @@ function Index() {
           <div className="flex flex-col min-h-0 h-screen overflow-hidden">
             {/* Thanh công cụ */}
             <div className="p-2 border-b border-[oklch(0.24_0.01_260)] flex gap-2">
-              <button onClick={() => handleDeleteMail(currentMailHeader.gmail_message_id, true)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Reply className="w-4 h-4" /></button>
+              <button onClick={() => handleDeleteMail(currentMailHeader.gmail_message_id, false)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Reply className="w-4 h-4" /></button>
               <button className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Forward className="w-4 h-4" /></button>
               <button onClick={() => handleStarMail(currentMailHeader.gmail_message_id, true)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white "><Star className="w-4 h-4" /></button>
               <button onClick={() => handleDeleteMail(currentMailHeader.gmail_message_id, true)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-red-400"><Trash2 className="w-4 h-4" /></button>

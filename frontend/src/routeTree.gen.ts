@@ -13,7 +13,12 @@ import { Route as MailRouteImport } from './routes/mail'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as E2eeRouteImport } from './routes/e2ee'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MailTrashRouteImport } from './routes/mail.trash'
+import { Route as MailSpamRouteImport } from './routes/mail.spam'
+import { Route as MailSentRouteImport } from './routes/mail.sent'
 import { Route as MailInboxRouteImport } from './routes/mail.inbox'
+import { Route as MailImportantRouteImport } from './routes/mail.important'
+import { Route as MailGroupsGroupIdRouteImport } from './routes/mail.groups.$groupId'
 
 const MailRoute = MailRouteImport.update({
   id: '/mail',
@@ -35,9 +40,34 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MailTrashRoute = MailTrashRouteImport.update({
+  id: '/trash',
+  path: '/trash',
+  getParentRoute: () => MailRoute,
+} as any)
+const MailSpamRoute = MailSpamRouteImport.update({
+  id: '/spam',
+  path: '/spam',
+  getParentRoute: () => MailRoute,
+} as any)
+const MailSentRoute = MailSentRouteImport.update({
+  id: '/sent',
+  path: '/sent',
+  getParentRoute: () => MailRoute,
+} as any)
 const MailInboxRoute = MailInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => MailRoute,
+} as any)
+const MailImportantRoute = MailImportantRouteImport.update({
+  id: '/important',
+  path: '/important',
+  getParentRoute: () => MailRoute,
+} as any)
+const MailGroupsGroupIdRoute = MailGroupsGroupIdRouteImport.update({
+  id: '/groups/$groupId',
+  path: '/groups/$groupId',
   getParentRoute: () => MailRoute,
 } as any)
 
@@ -46,14 +76,24 @@ export interface FileRoutesByFullPath {
   '/e2ee': typeof E2eeRoute
   '/login': typeof LoginRoute
   '/mail': typeof MailRouteWithChildren
+  '/mail/important': typeof MailImportantRoute
   '/mail/inbox': typeof MailInboxRoute
+  '/mail/sent': typeof MailSentRoute
+  '/mail/spam': typeof MailSpamRoute
+  '/mail/trash': typeof MailTrashRoute
+  '/mail/groups/$groupId': typeof MailGroupsGroupIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/e2ee': typeof E2eeRoute
   '/login': typeof LoginRoute
   '/mail': typeof MailRouteWithChildren
+  '/mail/important': typeof MailImportantRoute
   '/mail/inbox': typeof MailInboxRoute
+  '/mail/sent': typeof MailSentRoute
+  '/mail/spam': typeof MailSpamRoute
+  '/mail/trash': typeof MailTrashRoute
+  '/mail/groups/$groupId': typeof MailGroupsGroupIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,14 +101,50 @@ export interface FileRoutesById {
   '/e2ee': typeof E2eeRoute
   '/login': typeof LoginRoute
   '/mail': typeof MailRouteWithChildren
+  '/mail/important': typeof MailImportantRoute
   '/mail/inbox': typeof MailInboxRoute
+  '/mail/sent': typeof MailSentRoute
+  '/mail/spam': typeof MailSpamRoute
+  '/mail/trash': typeof MailTrashRoute
+  '/mail/groups/$groupId': typeof MailGroupsGroupIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/e2ee' | '/login' | '/mail' | '/mail/inbox'
+  fullPaths:
+    | '/'
+    | '/e2ee'
+    | '/login'
+    | '/mail'
+    | '/mail/important'
+    | '/mail/inbox'
+    | '/mail/sent'
+    | '/mail/spam'
+    | '/mail/trash'
+    | '/mail/groups/$groupId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/e2ee' | '/login' | '/mail' | '/mail/inbox'
-  id: '__root__' | '/' | '/e2ee' | '/login' | '/mail' | '/mail/inbox'
+  to:
+    | '/'
+    | '/e2ee'
+    | '/login'
+    | '/mail'
+    | '/mail/important'
+    | '/mail/inbox'
+    | '/mail/sent'
+    | '/mail/spam'
+    | '/mail/trash'
+    | '/mail/groups/$groupId'
+  id:
+    | '__root__'
+    | '/'
+    | '/e2ee'
+    | '/login'
+    | '/mail'
+    | '/mail/important'
+    | '/mail/inbox'
+    | '/mail/sent'
+    | '/mail/spam'
+    | '/mail/trash'
+    | '/mail/groups/$groupId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -108,6 +184,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mail/trash': {
+      id: '/mail/trash'
+      path: '/trash'
+      fullPath: '/mail/trash'
+      preLoaderRoute: typeof MailTrashRouteImport
+      parentRoute: typeof MailRoute
+    }
+    '/mail/spam': {
+      id: '/mail/spam'
+      path: '/spam'
+      fullPath: '/mail/spam'
+      preLoaderRoute: typeof MailSpamRouteImport
+      parentRoute: typeof MailRoute
+    }
+    '/mail/sent': {
+      id: '/mail/sent'
+      path: '/sent'
+      fullPath: '/mail/sent'
+      preLoaderRoute: typeof MailSentRouteImport
+      parentRoute: typeof MailRoute
+    }
     '/mail/inbox': {
       id: '/mail/inbox'
       path: '/inbox'
@@ -115,15 +212,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MailInboxRouteImport
       parentRoute: typeof MailRoute
     }
+    '/mail/important': {
+      id: '/mail/important'
+      path: '/important'
+      fullPath: '/mail/important'
+      preLoaderRoute: typeof MailImportantRouteImport
+      parentRoute: typeof MailRoute
+    }
+    '/mail/groups/$groupId': {
+      id: '/mail/groups/$groupId'
+      path: '/groups/$groupId'
+      fullPath: '/mail/groups/$groupId'
+      preLoaderRoute: typeof MailGroupsGroupIdRouteImport
+      parentRoute: typeof MailRoute
+    }
   }
 }
 
 interface MailRouteChildren {
+  MailImportantRoute: typeof MailImportantRoute
   MailInboxRoute: typeof MailInboxRoute
+  MailSentRoute: typeof MailSentRoute
+  MailSpamRoute: typeof MailSpamRoute
+  MailTrashRoute: typeof MailTrashRoute
+  MailGroupsGroupIdRoute: typeof MailGroupsGroupIdRoute
 }
 
 const MailRouteChildren: MailRouteChildren = {
+  MailImportantRoute: MailImportantRoute,
   MailInboxRoute: MailInboxRoute,
+  MailSentRoute: MailSentRoute,
+  MailSpamRoute: MailSpamRoute,
+  MailTrashRoute: MailTrashRoute,
+  MailGroupsGroupIdRoute: MailGroupsGroupIdRoute,
 }
 
 const MailRouteWithChildren = MailRoute._addFileChildren(MailRouteChildren)

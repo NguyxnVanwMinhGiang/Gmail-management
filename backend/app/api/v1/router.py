@@ -15,4 +15,3 @@ api_router.include_router(
     prefix="/gmail",
     tags=["Mail Service"]
 )
-

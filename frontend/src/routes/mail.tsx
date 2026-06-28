@@ -1,7 +1,7 @@
-import { createFileRoute, Outlet , redirect } from '@tanstack/react-router'
+import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { Cloud, RefreshCw, Plus} from 'lucide-react'
 import Account from '../components/mail/Account'
-import { asyncGmail } from '../api/gmail'
+import { asyncGmail, getInbox } from '../api/gmail'
 
 export const Route = createFileRoute('/mail')({
   beforeLoad: () => {
@@ -26,11 +26,14 @@ export const Route = createFileRoute('/mail')({
 function SideBar() {
   const handleSyncEmails = async () => {
     try {
+      confirm("Bạn có chắc chắn muốn đồng bộ email không?")
       await asyncGmail(20);
       alert("Đồng bộ thành công!");
+      await getInbox(1, 20);
     } catch (error) {
       console.error("Lỗi đồng bộ:", error);
       alert("Đồng bộ thất bại!");
+    } finally { // Gọi lại hàm getInbox để cập nhật danh sách email sau khi đồng bộ
     }
   };
 

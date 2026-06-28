@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 
 from google.oauth2.credentials import Credentials
 
+
 from app.core.config import config
 
 def callAPToken(code: str):
@@ -74,3 +75,5 @@ def refreshGoogleToken(refresh_token: str):
             client_secret=config.GOOGLE_CLIENT_SECRET,
             scopes=["https://mail.google.com/"]
         )
+
+

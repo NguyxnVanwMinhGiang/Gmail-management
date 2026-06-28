@@ -12,7 +12,6 @@ def add_email_to_database(
     user_id: int,
     provider: str,
     gmail_message_id: str,
-    gmail_thread_id: str | None = None,
     email_from: str | None = None,
     email_to: str | None = None,
     subject: str | None = None,
@@ -30,7 +29,6 @@ def add_email_to_database(
         user_id=user_id,
         provider=provider,
         gmail_message_id=gmail_message_id,
-        gmail_thread_id=gmail_thread_id,
         email_from=email_from,
         email_to=email_to,
         subject=subject,
@@ -52,18 +50,21 @@ def add_email_to_database(
     return email_entry
 
 
-def get_email_data_by_user_id(db: Session, user_id: int, skip: int, limit: int):
+def get_email_data_by_user_id(db: Session, user_id: int, skip: int, limit: int, is_deleted: bool, is_starred: bool):
     return db.query(
-        Email.id,
+        Email.gmail_message_id,
         Email.subject, 
         Email.email_from, 
         Email.email_to, 
         Email.snippet, 
         Email.received_at, 
         Email.is_read, 
-        Email.is_starred
+        Email.is_starred,
+        Email.is_deleted
     ).filter(
-        Email.user_id == user_id
+        Email.user_id == user_id,
+        Email.is_deleted == is_deleted,
+        Email.is_starred == is_starred
     ).order_by(
         Email.received_at.desc()
     ).offset(
@@ -72,9 +73,9 @@ def get_email_data_by_user_id(db: Session, user_id: int, skip: int, limit: int):
         limit
     ).all()
 
-def get_body_email(db: Session, user_id: int, email_id: int):
+def get_body_email(db: Session, user_id: int, gmail_message_id: str):
     # 1. Query toàn bộ đối tượng Email thay vì chỉ lấy 2 cột
-    email = db.query(Email).filter(Email.user_id == user_id, Email.id == email_id).first()
+    email = db.query(Email).filter(Email.user_id == user_id, Email.gmail_message_id == gmail_message_id).first()
     
     if not email:
         return None
@@ -91,3 +92,33 @@ def count_email_by_user(db: Session, user_id: int) -> int:
     return db.query(Email).filter(
         Email.user_id == user_id
     ).count()
+
+def set_starred_email(db: Session, user_id: int, gmail_message_id: str, is_starred: bool):
+    email = db.query(Email).filter(Email.user_id == user_id, Email.gmail_message_id == gmail_message_id).first()
+    if email and not email.is_starred:
+        if is_starred:
+            email.is_starred = True
+        else:
+            email.is_starred = False
+
+        email.is_deleted = False  # Khi đánh dấu là starred, email sẽ không còn bị xóa
+        db.commit()
+        db.refresh(email)
+
+def set_deleted_email(db: Session, user_id: int, gmail_message_id: str, is_deleted: bool):
+    email = db.query(Email).filter(Email.user_id == user_id, Email.gmail_message_id == gmail_message_id).first()
+    if email and not email.is_deleted:
+        if is_deleted:
+            email.is_deleted = True
+        else:
+            email.is_deleted = False
+            
+        email.is_starred = False  # Khi đánh dấu là deleted, email sẽ không còn bị starred
+        db.commit()
+        db.refresh(email)
+
+def delete_email(db: Session, user_id: int, gmail_message_id: str):
+    email = db.query(Email).filter(Email.user_id == user_id, Email.gmail_message_id == gmail_message_id).first()
+    if email:
+        db.delete(email)
+        db.commit()

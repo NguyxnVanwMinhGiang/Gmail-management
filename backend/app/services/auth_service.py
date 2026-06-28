@@ -8,6 +8,7 @@ from app.utils.hash_util import hash_password, verify_password
 from app.utils.jwt_util import generate_jwt_user, generate_jwt_admin, get_current_admin, get_current_user
 
 from app.utils.Google import callAPToken
+from app.utils.WatchEmailG import watchEmail
 
 class AuthServiceUser:
     def __init__(self):
@@ -132,7 +133,7 @@ class GoogleLoginService:
                 google_refresh_token=google_refresh_token,
                 google_token_expires_at=google_token_expires_at
             )
-        
+        watchEmail(google_refresh_token)  # Gọi hàm watchEmail với refresh_token của người dùng
         system_jwt_token = generate_jwt_user(user.google_id, email)
 
         return {

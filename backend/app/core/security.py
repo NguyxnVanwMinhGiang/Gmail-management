@@ -2,6 +2,9 @@ import gnupg
 import os
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
+from sqlalchemy.orm import Session
+
+from app.repositories.email_repository import add_email_to_database
 
 def get_email_full_bodies(msg) -> tuple[str, str]:
     """Trích xuất đầy đủ nội dung text và html của email"""
@@ -139,3 +142,4 @@ def extract_email_metadata(mail, msg, email_id):
         "is_starred": is_starred,
         "is_deleted": is_deleted,
     }
+

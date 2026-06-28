@@ -2,11 +2,10 @@ import axios from "axios";
 
 // Định nghĩa kiểu dữ liệu trả về từ Backend tương ứng với Database của bạn
 export type EmailItem = {
-  id: number;
+
   user_id: number;
   provider: string;
   gmail_message_id: string;
-  gmail_thread_id?: string | null;
   email_from?: string | null;
   email_to?: string | null;
   subject?: string | null;
@@ -15,6 +14,7 @@ export type EmailItem = {
   snippet?: string | null;
   is_read: boolean;
   is_starred: boolean;
+  is_delete: boolean;
   sent_at?: string | null;
   received_at?: string | null;
 };
@@ -24,11 +24,16 @@ export type EmailBody = {
   body_html: string;
 }
 
+export type EamilAction = {
+  emailID: number
+}
+
 const API_URL = "http://127.0.0.1:8000/api/v1"; // Thay bằng URL Backend của bạn
 
+// METHOD GET
 export const asyncGmail = async (limit: number) => {
   const token = localStorage.getItem("accessToken");
-  
+
   if (!token) {
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
@@ -41,8 +46,9 @@ export const asyncGmail = async (limit: number) => {
   });
 
   return response.status + "message: success"
-    
+
 }
+
 
 export const getInbox = async (page: number, limit: number): Promise<EmailItem[]> => {
   // Lấy hệ thống token bạn lưu lúc đăng nhập (ví dụ lưu trong localStorage)
@@ -62,7 +68,45 @@ export const getInbox = async (page: number, limit: number): Promise<EmailItem[]
   return response.data.data || response.data;
 };
 
-export const getBody = async (gmail_message_id: number): Promise<EmailBody> => {
+
+export const getTrash = async (page: number, limit: number): Promise<EmailItem[]> => {
+  // Lấy hệ thống token bạn lưu lúc đăng nhập (ví dụ lưu trong localStorage)
+  const token = localStorage.getItem("accessToken");
+
+  if (!token) {
+    throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
+  }
+
+  const response = await axios.get(`${API_URL}/gmail/deleted`, {
+    params: { page, limit },
+    headers: {
+      Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
+    },
+  });
+  // Giả sử Backend trả về object có dạng: { message: "...", data: [...] } hoặc trực tiếp mảng
+  return response.data.data || response.data;
+};
+
+
+export const getStarred = async (page: number, limit: number): Promise<EmailItem[]> => {
+  // Lấy hệ thống token bạn lưu lúc đăng nhập (ví dụ lưu trong localStorage)
+  const token = localStorage.getItem("accessToken");
+
+  if (!token) {
+    throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
+  }
+
+  const response = await axios.get(`${API_URL}/gmail/starred`, {
+    params: { page, limit },
+    headers: {
+      Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
+    },
+  });
+  // Giả sử Backend trả về object có dạng: { message: "...", data: [...] } hoặc trực tiếp mảng
+  return response.data.data || response.data;
+};
+
+export const getBody = async (gmail_message_id: string): Promise<EmailBody> => {
   const token = localStorage.getItem("accessToken");
   console.log("id email: ", gmail_message_id)
   if (!token) {
@@ -77,4 +121,73 @@ export const getBody = async (gmail_message_id: number): Promise<EmailBody> => {
 
   // Giả sử Backend trả về object có dạng: { message: "...", data: [...] } hoặc trực tiếp mảng
   return response.data?.data || response.data;
+};
+
+
+// METHOD POST
+export const deleteEamil = async (gmail_message_id: string, is_deleted: boolean) => {
+  const token = localStorage.getItem("accessToken");
+
+  if (!token) {
+    throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
+  }
+
+  const response = await axios.post(
+    `${API_URL}/gmail/id/${gmail_message_id}/delete`, {},
+    {
+      params: { is_deleted },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return {
+    "status": response.status
+  }
+}
+
+export const deleteEamilDB = async (gmail_message_id: string) => {
+  const token = localStorage.getItem("accessToken");
+
+  if (!token) {
+    throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
+  }
+
+  const response = await axios.post(
+    `${API_URL}/gmail/id/${gmail_message_id}/permanently-delete`,
+    {}, // body rỗng
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  
+  return {
+    "status": response.status
+  }
+}
+
+export const starredEmail = async (gmail_message_id: string, is_starred: boolean) => {
+  const token = localStorage.getItem("accessToken");
+
+  if (!token) {
+    throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
+  }
+
+  const response = await axios.post(
+    `${API_URL}/gmail/id/${gmail_message_id}/starred`, {},
+    {
+      params: { is_starred },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  console.log("ok")
+
+  return {
+    status: response.status,
+  };
 };

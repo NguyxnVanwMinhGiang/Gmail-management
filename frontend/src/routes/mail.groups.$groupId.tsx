@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState} from "react";
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react';
 import {Trash2, Search, Reply, Forward, Star} from "lucide-react";
 import IframeEmailViewer from "../components/mail/IframeRenderBodyMail";
 
@@ -8,22 +8,17 @@ import {useInboxQuery} from "../hooks/useInboxQuery";
 import {useDecryptedHeaders} from "../hooks/useDecryptedHeaders";
 import {useMailActions} from "../hooks/useMailActions";
 
+export const Route = createFileRoute('/mail/groups/$groupId')({
+  component: GroupPage,
+})
 
-
-export const Route = createFileRoute("/mail/inbox")({
-  component: Index,
-});
-
-function Index() {
+function GroupPage() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<number>(0);
 
-  // 1. Gọi Data
   const { rawEmails, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInboxQuery();
-  // 2. Giải mã Header
-  const { decryptedHeaders, setDecryptedHeaders } = useDecryptedHeaders(rawEmails, navigate);
 
-  // 3. Xử lý logic chọn mail
+  const { decryptedHeaders, setDecryptedHeaders } = useDecryptedHeaders(rawEmails, navigate);
   const currentMailHeader = decryptedHeaders[selected] ?? null;
   const currentRawMail = rawEmails[selected] ?? null;
   const currentMailKey = currentRawMail ? String(currentRawMail.gmail_message_id) : null;
@@ -37,21 +32,15 @@ function Index() {
     setDecryptedHeaders(curr => curr.map((item, idx) => idx === index ? { ...item, is_read: true } : item));
   };
 
-  const handleDeleteMail = async (gmail_message_id: string, is_deleted: boolean) => {
+  const handleDeleteMail = async (gmail_message_id: string) => {
     if (!currentRawMail) return;
-    await deleteMail({
-      id: gmail_message_id,
-      is_deleted,
-    });
+    await deleteMail(gmail_message_id); 
   }
 
   // SỬA Ở ĐÂY: Dùng starMail thay cho starredEmail cũ
-  const handleStarMail = async (gmail_message_id: string, is_starred: boolean) => {
+  const handleStarMail = async (gmail_message_id: string) => {
     if (!currentRawMail) return;
-    await starMail({
-      id: gmail_message_id,
-      is_starred
-    });
+    await starMail(gmail_message_id); 
   }
 
   // Logic cuộn tải thêm trang
@@ -136,10 +125,14 @@ function Index() {
           <div className="flex flex-col min-h-0 h-screen overflow-hidden">
             {/* Thanh công cụ */}
             <div className="p-2 border-b border-[oklch(0.24_0.01_260)] flex gap-2">
-              <button onClick={() => handleDeleteMail(currentMailHeader.gmail_message_id, true)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Reply className="w-4 h-4" /></button>
+              <button onClick={() => handleDeleteMail(currentMailHeader.gmail_message_id)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Reply className="w-4 h-4" /></button>
               <button className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Forward className="w-4 h-4" /></button>
-              <button onClick={() => handleStarMail(currentMailHeader.gmail_message_id, true)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white "><Star className="w-4 h-4" /></button>
-              <button onClick={() => handleDeleteMail(currentMailHeader.gmail_message_id, true)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-red-400"><Trash2 className="w-4 h-4" /></button>
+              {currentMailHeader.is_starred ? (
+                <button onClick={() => handleStarMail(currentMailHeader.gmail_message_id)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white bg-amber-400"><Star className="w-4 h-4" /></button>
+              ) : (
+                <button onClick={() => handleStarMail(currentMailHeader.gmail_message_id)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white "><Star className="w-4 h-4" /></button>
+              )}
+              <button onClick={() => handleDeleteMail(currentMailHeader.gmail_message_id)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-red-400"><Trash2 className="w-4 h-4" /></button>
             </div>
 
             {/* Khung nội dung */}
@@ -149,7 +142,7 @@ function Index() {
               <div className="flex justify-between border-b border-[oklch(0.2_0.01_260)] pb-4 mb-4 text-sm">
                 <div>
                   <div className="text-white font-medium flex justify-between gap-7 items-center">
-                    Từ: {currentMailHeader.email_from}
+                      Từ: {currentMailHeader.email_from}
                   </div>
 
                   <div className="text-xs text-[oklch(0.5_0.01_260)] mt-0.5">Tới: {currentMailHeader.email_to || "me"}</div>
