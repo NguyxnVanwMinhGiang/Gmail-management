@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, startTransition } from "react";
 import * as openpgp from 'openpgp';
-import { getBody } from "../api/gmail";
+import { getBody } from "../api/mail";
 import { decryptPGPText } from "../api/openpgp";
 
 export const useDecryptedBody = (currentMailKey: string | null) => {
@@ -88,8 +88,8 @@ export const useDecryptedBody = (currentMailKey: string | null) => {
   }, [currentMailKey]);
 
   // 3. Trả về dữ liệu để Component có thể sử dụng
-  return { 
-    activeBody, 
-    isDecryptingBody 
+  return {
+    activeBody,
+    isDecryptingBody
   };
 };

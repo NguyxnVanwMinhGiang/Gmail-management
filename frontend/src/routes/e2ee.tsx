@@ -1,11 +1,18 @@
 // routes/e2ee-setup.tsx (Ví dụ Component xác thực)
 import { useState, useEffect } from 'react';
-import { useNavigate, createFileRoute } from '@tanstack/react-router';
+import { useNavigate, createFileRoute, redirect } from '@tanstack/react-router';
 import { PGPService } from "../api/openpgp"; // Đảm bảo đường dẫn đúng tới file openpgp.ts
-// Import thư viện lưu state toàn cục của bạn (như Zustand/Redux) nếu có.
-// Hoặc lưu tạm vào sessionStorage: sessionStorage.setItem('decryptedKey', ...)
 
 export const Route = createFileRoute("/e2ee")({
+  beforeLoad: () => {
+    const token = localStorage.getItem("accessToken");
+    
+    if (!token) {
+      throw redirect({
+        to: "/login",
+      });
+    }
+  },
   component: E2EESetup,
 });
 
@@ -23,6 +30,7 @@ function E2EESetup() {
   useEffect(() => {
     if (!token) {
       setError("Không tìm thấy access token. Vui lòng đăng nhập lại.");
+      console.log("Access token is missing. User might not be logged in.");
       setLoading(false);
       return;
     }
@@ -63,7 +71,7 @@ function E2EESetup() {
 
       // Mở khóa luôn cho phiên hiện tại
       const unlockedKey = await PGPService.unlockPrivateKey(encryptedPrivateKey, passphrase);
-      sessionStorage.setItem('unlocked_private_key', unlockedKey.armor()); 
+      sessionStorage.setItem('unlocked_private_key', unlockedKey.armor());
 
       navigate({ to: "/mail/inbox" }); // Vào hòm thư
     } catch (e) {

@@ -13,6 +13,7 @@ from app.repositories.google_repository import (
     find_by_google_id,
 )
 from app.utils.jwt_util import get_current_user
+from app.repositories.user_repository import find_id_4u
 
 
 class GmailService:
@@ -93,9 +94,9 @@ class GmailService:
                         raw_message_id = msg.get('Message-ID', '')
                         gmail_msg_id = str(raw_message_id.strip('<>') if raw_message_id else num.decode('utf-8'))
                         gmail_normalize = re.sub(r'[^a-zA-Z0-9]', '', gmail_msg_id)
-                        gmail_message_id: str = gmail_normalize[:16]
+                        message_id: str = gmail_normalize[:16]
                         
-                        if check_google_message_id(db, user_gg_id, gmail_message_id):
+                        if check_google_message_id(db, user_gg_id, message_id):
                             continue
 
                         # --- TRÍCH XUẤT CÁC THÀNH PHẦN (PLAIN TEXT THÔ) ---
@@ -120,7 +121,7 @@ class GmailService:
                             db=db,
                             user_id=user_gg_id,
                             provider="google",
-                            gmail_message_id=gmail_message_id,
+                            message_id=message_id,
                             email_from=sender,
                             email_to=receiver,         # Truyền thêm thông tin người nhận nếu cần công khai
                             subject=encrypted_subject, # Đã mã hóa
@@ -160,22 +161,34 @@ class GmailService:
                 except: pass
             raise HTTPException(status_code=500, detail=f"Lỗi hệ thống: {str(e)}")
         
-        
 
-    def get_email_body(self, db: Session, token: str, gmail_message_id: str):
+    def get_email_body(self, db: Session, token: str, message_id: str):
         token_payload = get_current_user(token)
-        user = find_by_google_id(db, token_payload)
 
-        if not user:
+        if not token_payload:
             raise HTTPException(status_code=401, detail="Token không hợp lệ")
+        
+        id_user = token_payload["user_id"]
+        role_user = token_payload["role"]
+        
+        if role_user == "user":
+            user = find_by_google_id(db, id_user)
+            if not user:
+                raise HTTPException(status_code=401, detail="Token không hợp lệ")
+            
+            email_content = get_body_email(db, user.id, message_id, provider="google")
+        else:
+            user = find_id_4u(db, id_user)
+            if not user:
+                raise HTTPException(status_code=401, detail="Token không hợp lệ")
 
-        email_content = get_body_email(db, user.id, gmail_message_id)
+            email_content = get_body_email(db, user.id, message_id, provider="user4u")
         
         if email_content is None:
             raise HTTPException(status_code=404, detail="Không tìm thấy email với ID đã cho.")
 
         return {
-            "email_id": gmail_message_id,
+            "email_id": message_id,
             "body_text": email_content[0],
             "body_html": email_content[1]
         }
@@ -186,12 +199,16 @@ class GmailService:
         if not token_payload:
             raise HTTPException(status_code=401, detail="Token không hợp lệ")
         
-        user = find_by_google_id(db, token_payload)
-
-        print(f"User ID extracted from token: {user.id}")  # Debugging line
-
-
-        data_response = get_email_data_by_user_id(db, user.id, skip=skip, limit=limit, is_deleted=is_deleted, is_starred=is_starred)
+        id_user = token_payload["user_id"]
+        role_user = token_payload["role"]
+        
+        if role_user == "user":
+            user = find_by_google_id(db, id_user)
+            data_response = get_email_data_by_user_id(db, user.id, provider="google", skip=skip, limit=limit, is_deleted=is_deleted, is_starred=is_starred)
+        else:
+            user = find_id_4u(db, id_user)
+            data_response = get_email_data_by_user_id(db, user.id, provider="user4u", skip=skip, limit=limit, is_deleted=is_deleted, is_starred=is_starred)
+        
 
         if not data_response:
             return {"message": "Không có email nào trong hòm thư.", "data": []}
@@ -199,7 +216,7 @@ class GmailService:
         emails = []
         for email_data in data_response:
             emails.append({
-                "gmail_message_id": email_data.gmail_message_id,
+                "message_id": email_data.message_id,
                 "subject": email_data.subject,
                 "email_from": email_data.email_from,
                 "email_to": email_data.email_to,
@@ -213,45 +230,66 @@ class GmailService:
             "data": emails
         }
     
-    def set_starred_email(self, db: Session, token: str, gmail_message_id: str, is_starred: bool):
+    def set_starred_email(self, db: Session, token: str, message_id: str, is_starred: bool):
         token_payload = get_current_user(token)
 
         if not token_payload:
             raise HTTPException(status_code=401, detail="Token không hợp lệ")
 
-        user = find_by_google_id(db, token_payload)
+        id_user = token_payload["user_id"]
+        role_user = token_payload["role"]
+
+        if role_user == "user":
+            user = find_by_google_id(db, id_user)
+        else:
+            user = find_id_4u(db, id_user)
+
         try:
             if is_starred:
-                set_starred_email(db, user.id, gmail_message_id, is_starred=True)
+                set_starred_email(db, user.id, message_id, is_starred=True)
             else:
-                set_starred_email(db, user.id, gmail_message_id, is_starred=False)
+                set_starred_email(db, user.id, message_id, is_starred=False)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Lỗi khi đánh dấu email là sao: {str(e)}")
 
-    def set_deleted_email(self, db: Session, token: str, gmail_message_id: str, is_deleted: bool):
+    def set_deleted_email(self, db: Session, token: str, message_id: str, is_deleted: bool):
         token_payload = get_current_user(token)
 
         if not token_payload:
             raise HTTPException(status_code=401, detail="Token không hợp lệ")
 
-        user = find_by_google_id(db, token_payload)
+        id_user = token_payload["user_id"]
+        role_user = token_payload["role"]
+
+        if role_user == "user":
+            user = find_by_google_id(db, id_user)
+        else:
+            user = find_id_4u(db, id_user)
+
         try:
             if is_deleted:
-                set_deleted_email(db, user.id, gmail_message_id, is_deleted=True)
+                set_deleted_email(db, user.id, message_id, is_deleted=True)
             else:
-                set_deleted_email(db, user.id, gmail_message_id, is_deleted=False)
+                set_deleted_email(db, user.id, message_id, is_deleted=False)
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Lỗi khi đánh dấu email là đã xóa: {str(e)}")
     
-    def delete_email(self, db: Session, token: str, gmail_message_id: str):
+    def delete_email(self, db: Session, token: str, message_id: str):
         token_payload = get_current_user(token)
 
         if not token_payload:
             raise HTTPException(status_code=401, detail="Token không hợp lệ")
 
-        user = find_by_google_id(db, token_payload)
+        id_user = token_payload["user_id"]
+        role_user = token_payload["role"]
+
+        if role_user == "user":
+            user = find_by_google_id(db, id_user)
+        else:
+            user = find_id_4u(db, id_user)
+
         try:   
-            delete_email(db, user.id, gmail_message_id)
+            delete_email(db, user.id, message_id)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Lỗi khi xóa email: {str(e)}")

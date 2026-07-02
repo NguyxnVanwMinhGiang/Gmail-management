@@ -1,4 +1,4 @@
-// api/pgpService.ts
+
 import * as openpgp from 'openpgp';
 
 export const PGPService = {

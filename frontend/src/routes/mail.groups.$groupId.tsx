@@ -21,7 +21,7 @@ function GroupPage() {
   const { decryptedHeaders, setDecryptedHeaders } = useDecryptedHeaders(rawEmails, navigate);
   const currentMailHeader = decryptedHeaders[selected] ?? null;
   const currentRawMail = rawEmails[selected] ?? null;
-  const currentMailKey = currentRawMail ? String(currentRawMail.gmail_message_id) : null;
+  const currentMailKey = currentRawMail ? String(currentRawMail.message_id) : null;
 
   const { activeBody, isDecryptingBody } = useDecryptedBody(currentMailKey);
 
@@ -32,15 +32,15 @@ function GroupPage() {
     setDecryptedHeaders(curr => curr.map((item, idx) => idx === index ? { ...item, is_read: true } : item));
   };
 
-  const handleDeleteMail = async (gmail_message_id: string) => {
+  const handleDeleteMail = async ({message_id, is_deleted}: {message_id: string, is_deleted: boolean}) => {
     if (!currentRawMail) return;
-    await deleteMail(gmail_message_id); 
+    await deleteMail({id: message_id, is_deleted});
   }
 
   // SỬA Ở ĐÂY: Dùng starMail thay cho starredEmail cũ
-  const handleStarMail = async (gmail_message_id: string) => {
+  const handleStarMail = async ({message_id, is_starred}: {message_id: string, is_starred: boolean}) => {
     if (!currentRawMail) return;
-    await starMail(gmail_message_id); 
+    await starMail({id: message_id, is_starred});
   }
 
   // Logic cuộn tải thêm trang
@@ -82,7 +82,7 @@ function GroupPage() {
           ) : (
             decryptedHeaders.map((item, index) => (
               <div
-                key={item.gmail_message_id}
+                key={item.message_id}
                 onClick={() => handleSelectMail(index)}
                 className={`p-3 cursor-pointer transition-colors ${selected === index
                   ? item.is_read
@@ -125,14 +125,14 @@ function GroupPage() {
           <div className="flex flex-col min-h-0 h-screen overflow-hidden">
             {/* Thanh công cụ */}
             <div className="p-2 border-b border-[oklch(0.24_0.01_260)] flex gap-2">
-              <button onClick={() => handleDeleteMail(currentMailHeader.gmail_message_id)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Reply className="w-4 h-4" /></button>
+              <button onClick={() => handleDeleteMail({message_id: currentMailHeader.message_id, is_deleted: true})} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Reply className="w-4 h-4" /></button>
               <button className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Forward className="w-4 h-4" /></button>
               {currentMailHeader.is_starred ? (
-                <button onClick={() => handleStarMail(currentMailHeader.gmail_message_id)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white bg-amber-400"><Star className="w-4 h-4" /></button>
+                <button onClick={() => handleStarMail({message_id: currentMailHeader.message_id, is_starred: false})} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white bg-amber-400"><Star className="w-4 h-4" /></button>
               ) : (
-                <button onClick={() => handleStarMail(currentMailHeader.gmail_message_id)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white "><Star className="w-4 h-4" /></button>
+                <button onClick={() => handleStarMail({message_id: currentMailHeader.message_id, is_starred: true})} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white "><Star className="w-4 h-4" /></button>
               )}
-              <button onClick={() => handleDeleteMail(currentMailHeader.gmail_message_id)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-red-400"><Trash2 className="w-4 h-4" /></button>
+              <button onClick={() => handleDeleteMail({message_id: currentMailHeader.message_id, is_deleted: true})} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-red-400"><Trash2 className="w-4 h-4" /></button>
             </div>
 
             {/* Khung nội dung */}
@@ -161,7 +161,7 @@ function GroupPage() {
                 ) : activeBody ? (
                   activeBody.html ? (
                     // SỬA Ở ĐÂY: Thêm flex-1, w-full, và min-h-[65vh] (hoặc min-h-[500px])
-                    <div className="flex-1 w-full min-h-[77vh] rounded-md overflow-hidden bg-white">
+                    <div className="flex-1 w-full min-h-[77vh] overflow-hidden bg-white">
                       <IframeEmailViewer htmlContent={activeBody.html} />
                     </div>
                   ) : (

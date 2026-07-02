@@ -2,10 +2,9 @@ import axios from "axios";
 
 // Định nghĩa kiểu dữ liệu trả về từ Backend tương ứng với Database của bạn
 export type EmailItem = {
-
   user_id: number;
   provider: string;
-  gmail_message_id: string;
+  message_id: string;
   email_from?: string | null;
   email_to?: string | null;
   subject?: string | null;
@@ -26,6 +25,16 @@ export type EmailBody = {
 
 export type EamilAction = {
   emailID: number
+}
+
+
+export type EmailSend ={
+  provider: string;
+  message_id: string;
+  email_from?: string | null;
+  email_to?: string | null;
+  subject?: string | null;
+  body_text?: string | null;
 }
 
 const API_URL = "http://127.0.0.1:8000/api/v1"; // Thay bằng URL Backend của bạn
@@ -106,14 +115,14 @@ export const getStarred = async (page: number, limit: number): Promise<EmailItem
   return response.data.data || response.data;
 };
 
-export const getBody = async (gmail_message_id: string): Promise<EmailBody> => {
+export const getBody = async (message_id: string): Promise<EmailBody> => {
   const token = localStorage.getItem("accessToken");
-  console.log("id email: ", gmail_message_id)
+  console.log("id email: gmail.ts", message_id)
   if (!token) {
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.get(`${API_URL}/gmail/id/${gmail_message_id}`, {
+  const response = await axios.get(`${API_URL}/gmail/id/${message_id}`, {
     headers: {
       Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
     },
@@ -125,7 +134,7 @@ export const getBody = async (gmail_message_id: string): Promise<EmailBody> => {
 
 
 // METHOD POST
-export const deleteEamil = async (gmail_message_id: string, is_deleted: boolean) => {
+export const deleteEamil = async (message_id: string, is_deleted: boolean) => {
   const token = localStorage.getItem("accessToken");
 
   if (!token) {
@@ -133,7 +142,7 @@ export const deleteEamil = async (gmail_message_id: string, is_deleted: boolean)
   }
 
   const response = await axios.post(
-    `${API_URL}/gmail/id/${gmail_message_id}/delete`, {},
+    `${API_URL}/gmail/id/${message_id}/delete`, {},
     {
       params: { is_deleted },
       headers: {
@@ -147,7 +156,7 @@ export const deleteEamil = async (gmail_message_id: string, is_deleted: boolean)
   }
 }
 
-export const deleteEamilDB = async (gmail_message_id: string) => {
+export const deleteEamilDB = async (message_id: string) => {
   const token = localStorage.getItem("accessToken");
 
   if (!token) {
@@ -155,7 +164,7 @@ export const deleteEamilDB = async (gmail_message_id: string) => {
   }
 
   const response = await axios.post(
-    `${API_URL}/gmail/id/${gmail_message_id}/permanently-delete`,
+    `${API_URL}/gmail/id/${message_id}/permanently-delete`,
     {}, // body rỗng
     {
       headers: {
@@ -163,13 +172,13 @@ export const deleteEamilDB = async (gmail_message_id: string) => {
       },
     }
   );
-  
+
   return {
     "status": response.status
   }
 }
 
-export const starredEmail = async (gmail_message_id: string, is_starred: boolean) => {
+export const starredEmail = async (message_id: string, is_starred: boolean) => {
   const token = localStorage.getItem("accessToken");
 
   if (!token) {
@@ -177,7 +186,7 @@ export const starredEmail = async (gmail_message_id: string, is_starred: boolean
   }
 
   const response = await axios.post(
-    `${API_URL}/gmail/id/${gmail_message_id}/starred`, {},
+    `${API_URL}/gmail/id/${message_id}/starred`, {},
     {
       params: { is_starred },
       headers: {

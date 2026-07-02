@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
 from sqlalchemy.sql import func
 from app.core.database import Base
 
@@ -11,12 +11,14 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
 
-    role = Column(String(50), default="user")
+    role = Column(String(50), default="user4u")
 
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
 
-    last_login = Column(DateTime(timezone=False), nullable=True)
+    public_key = Column(Text, nullable=True)
+    encrypted_private_key = Column(Text, nullable=True)
+
     created_at = Column(DateTime(timezone=False), server_default=func.now())
     updated_at = Column(DateTime(timezone=False), onupdate=func.now())
 

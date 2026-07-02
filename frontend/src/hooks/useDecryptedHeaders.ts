@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, startTransition } from "react";
 import * as openpgp from 'openpgp';
 import { decryptPGPText } from "../api/openpgp";
-import { type EmailItem } from "../api/gmail";
+import { type EmailItem } from "../api/mail";
 
 type OmitEmailItem = EmailItem & { subject: string; snippet: string; };
 
@@ -28,7 +28,7 @@ export const useDecryptedHeaders = (rawEmails: any[], navigate: any) => {
         const privateKeyObj = await openpgp.readPrivateKey({ armoredKey });
         const updatedList = await Promise.all(
           rawEmails.map(async (email) => {
-            const cacheKey = String(email.gmail_message_id);
+            const cacheKey = String(email.message_id);
             if (cacheRef.current.has(cacheKey)) return cacheRef.current.get(cacheKey)!;
 
             const [subject, snippet] = await Promise.all([

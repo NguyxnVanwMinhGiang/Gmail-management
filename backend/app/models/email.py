@@ -14,7 +14,7 @@ class Email(Base):
     user_id = Column(BigInteger, nullable=False, index=True)
 
     provider = Column(String(50), nullable=False, default="google")
-    gmail_message_id = Column(String(255), nullable=False)
+    message_id = Column(String(255), nullable=False)
 
     email_from = Column(Text, nullable=True)
     email_to = Column(Text, nullable=True)
@@ -24,7 +24,7 @@ class Email(Base):
     body_html = Column(Text, nullable=True)
     snippet = Column(Text, nullable=True)
 
-    label_ids = Column(ARRAY(Text), nullable=True)
+    file_ = Column(Text, nullable=True)
 
     is_read = Column(Boolean, default=False)
     is_starred = Column(Boolean, default=False)
@@ -41,5 +41,5 @@ class Email(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("user_id", "gmail_message_id", name="uq_user_gmail_message"),
+        UniqueConstraint("user_id", "message_id", name="uq_user_gmail_message"),
     )

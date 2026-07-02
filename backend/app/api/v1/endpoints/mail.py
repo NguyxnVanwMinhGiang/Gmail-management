@@ -1,9 +1,14 @@
-from fastapi import APIRouter, Depends, Header, Path, Query
+from typing import List
+
+from fastapi import APIRouter, Depends, File, Header, Path, Query, Form, UploadFile
+
+
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.utils.jwt_util import get_current_user
 from app.services.google_service import GmailService
+from app.services.sendMail_service import SendMailService
 
 router = APIRouter()
 
@@ -38,24 +43,25 @@ def get_deleted_emails(token: str = Header(..., alias="Authorization"), db: Sess
     return GmailService().get_emails_header(db=db, token=token, skip=skip, limit=limit, is_deleted=True, is_starred=False)
 
 # Page get email body
-@router.get("/id/{gmail_message_id}")
-def get_email_body(token: str = Header(..., alias="Authorization"), gmail_message_id: str = Path(..., description="ID của email trong database"), db: Session = Depends(get_db)):
-    return GmailService().get_email_body(db=db, gmail_message_id=gmail_message_id, token=token)
+@router.get("/id/{message_id}")
+def get_email_body(token: str = Header(..., alias="Authorization"), message_id: str = Path(..., description="ID của email trong database"), db: Session = Depends(get_db)):
+    return GmailService().get_email_body(db=db, message_id=message_id, token=token)
 
 
 
 # click vao buttom
-@router.post("/id/{gmail_message_id}/delete")
-def delete_email(token: str = Header(..., alias="Authorization"), gmail_message_id: str = Path(..., description="ID của email trong database"), db: Session = Depends(get_db), 
+@router.post("/id/{message_id}/delete")
+def delete_email(token: str = Header(..., alias="Authorization"), message_id: str = Path(..., description="ID của email trong database"), db: Session = Depends(get_db), 
                  is_deleted: bool = Query(..., description="True nếu muốn hoàn tác xóa, False nếu muốn xóa")):
-    return GmailService().set_deleted_email(db=db, token=token, gmail_message_id=gmail_message_id, is_deleted=is_deleted)
+    return GmailService().set_deleted_email(db=db, token=token, message_id=message_id, is_deleted=is_deleted)
 
-@router.post("/id/{gmail_message_id}/starred")
-def set_email_starred(token: str = Header(..., alias="Authorization"), gmail_message_id: str = Path(..., description="ID của email trong database"), db: Session = Depends(get_db), is_starred: bool = Query(..., description="True nếu muốn đánh dấu là starred, False nếu muốn bỏ đánh dấu")):
-    return GmailService().set_starred_email(db=db, token=token, gmail_message_id=gmail_message_id, is_starred=is_starred)
+@router.post("/id/{message_id}/starred")
+def set_email_starred(token: str = Header(..., alias="Authorization"), message_id: str = Path(..., description="ID của email trong database"), db: Session = Depends(get_db), is_starred: bool = Query(..., description="True nếu muốn đánh dấu là starred, False nếu muốn bỏ đánh dấu")):
+    return GmailService().set_starred_email(db=db, token=token, message_id=message_id, is_starred=is_starred)
 
-@router.post("/id/{gmail_message_id}/permanently-delete")
-def permanently_delete_email(token: str = Header(..., alias="Authorization"), gmail_message_id: str = Path(..., description="ID của email trong database"), 
+@router.post("/id/{message_id}/permanently-delete")
+def permanently_delete_email(token: str = Header(..., alias="Authorization"), message_id: str = Path(..., description="ID của email trong database"), 
                              db: Session = Depends(get_db)):
-    return GmailService().delete_email(db=db, token=token, gmail_message_id=gmail_message_id)
+    return GmailService().delete_email(db=db, token=token, message_id=message_id)
+
 

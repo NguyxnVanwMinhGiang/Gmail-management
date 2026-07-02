@@ -1,8 +1,11 @@
 from sqlalchemy.orm import Session
 from app.models.user import User
 
-def find_by_email(db: Session, email: str):
+def find_email_4u(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
+
+def find_id_4u(db: Session, user_id: int):
+    return db.query(User).filter(User.id == user_id).first()
 
 
 def create_user(db: Session, email: str, password_hash: str, full_name: str | None = None):

@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useGoogleLogin } from '@react-oauth/google';
 import { Mail, Lock, User, X } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { loginWithEmail, registerWithEmail, saveAuthData, sendCodeForBackend, API_GOOGLE} from "../api/auth";
+import { loginWithEmail, registerWithEmail, sendCodeForBackend, API_GOOGLE } from "../api/auth";
 
 
 export const Route = createFileRoute("/login")({
@@ -56,8 +56,15 @@ function LoginPage() {
     try {
       if (isLogin) {
         const data = await loginWithEmail(email, password);
-        saveAuthData(data);
-        navigate({ to: "/e2ee" });
+        if (data.accessToken) {
+          localStorage.setItem("accessToken", data.accessToken);
+          if (data.user?.email)
+            localStorage.setItem("email", data.user.email);
+          localStorage.setItem("full_name", data.user?.full_name || "");
+          navigate({ to: "/e2ee" });
+        } else {
+          setError(data.message || "Đăng nhập thất bại, vui lòng thử lại");
+        }
         return;
       }
 
@@ -80,8 +87,12 @@ function LoginPage() {
       setLoading(true);
       try {
         const data = await sendCodeForBackend(authorizationCode);
-        saveAuthData(data);
-        navigate({ to: "/e2ee" });
+        if (data.accessToken) {
+          localStorage.setItem("accessToken", data.accessToken);
+          navigate({ to: "/e2ee" });
+        } else {
+          throw new Error("Đăng nhập thất bại, vui lòng thử lại");
+        }
         return;
 
       } catch (error: any) {

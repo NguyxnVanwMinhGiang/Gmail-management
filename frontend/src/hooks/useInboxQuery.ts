@@ -1,6 +1,6 @@
 // src/hooks/useInbox.ts
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { getInbox, getStarred, getTrash } from "../api/gmail";
+import { getInbox, getStarred, getTrash } from "../api/mail";
 import { useMemo } from "react";
 
 export const useInboxQuery = () => {

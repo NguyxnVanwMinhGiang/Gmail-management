@@ -4,7 +4,7 @@ import datetime
 from app.core.config import config
 
 
-def generate_jwt_user(user_id, email, algorithm="HS256", expiry_minutes=120):
+def generate_jwt_user(user_id, email, role, algorithm="HS256", expiry_minutes=120):
     """
     Tạo một JWT token.
     
@@ -17,7 +17,7 @@ def generate_jwt_user(user_id, email, algorithm="HS256", expiry_minutes=120):
     payload = {
         "user_id": user_id,
         "email": email,
-        "role": "user",
+        "role": role,
         "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=expiry_minutes),
         "iat": datetime.datetime.now(datetime.timezone.utc)  # Thời điểm tạo token
     }
@@ -128,14 +128,26 @@ def get_current_user(token: str) -> int:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token có user id không hợp lệ"
         )
+    
+    email = payload.get("email")
+    if email is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token không có email"
+        )
 
-    user_role = payload.get("role")
-
-    if user_role != "user":
+    user_role: str = payload.get("role")
+    if user_role != "user" and user_role != "user4u":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorize"
         )
     
-    return user_id # neu la tai khoan google thi user_id la google_id, neu la tai khoan thuong thi user_id la user_id trong db
+    return {
+        "user_id": user_id, 
+        "role": user_role,
+        "email": email
+        }
+
+    
 

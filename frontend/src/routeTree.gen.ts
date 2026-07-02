@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as MailTrashRouteImport } from './routes/mail.trash'
 import { Route as MailSpamRouteImport } from './routes/mail.spam'
 import { Route as MailSentRouteImport } from './routes/mail.sent'
+import { Route as MailNewRouteImport } from './routes/mail.new'
 import { Route as MailInboxRouteImport } from './routes/mail.inbox'
 import { Route as MailImportantRouteImport } from './routes/mail.important'
 import { Route as MailGroupsGroupIdRouteImport } from './routes/mail.groups.$groupId'
@@ -55,6 +56,11 @@ const MailSentRoute = MailSentRouteImport.update({
   path: '/sent',
   getParentRoute: () => MailRoute,
 } as any)
+const MailNewRoute = MailNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => MailRoute,
+} as any)
 const MailInboxRoute = MailInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/mail': typeof MailRouteWithChildren
   '/mail/important': typeof MailImportantRoute
   '/mail/inbox': typeof MailInboxRoute
+  '/mail/new': typeof MailNewRoute
   '/mail/sent': typeof MailSentRoute
   '/mail/spam': typeof MailSpamRoute
   '/mail/trash': typeof MailTrashRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/mail': typeof MailRouteWithChildren
   '/mail/important': typeof MailImportantRoute
   '/mail/inbox': typeof MailInboxRoute
+  '/mail/new': typeof MailNewRoute
   '/mail/sent': typeof MailSentRoute
   '/mail/spam': typeof MailSpamRoute
   '/mail/trash': typeof MailTrashRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/mail': typeof MailRouteWithChildren
   '/mail/important': typeof MailImportantRoute
   '/mail/inbox': typeof MailInboxRoute
+  '/mail/new': typeof MailNewRoute
   '/mail/sent': typeof MailSentRoute
   '/mail/spam': typeof MailSpamRoute
   '/mail/trash': typeof MailTrashRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/mail'
     | '/mail/important'
     | '/mail/inbox'
+    | '/mail/new'
     | '/mail/sent'
     | '/mail/spam'
     | '/mail/trash'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/mail'
     | '/mail/important'
     | '/mail/inbox'
+    | '/mail/new'
     | '/mail/sent'
     | '/mail/spam'
     | '/mail/trash'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/mail'
     | '/mail/important'
     | '/mail/inbox'
+    | '/mail/new'
     | '/mail/sent'
     | '/mail/spam'
     | '/mail/trash'
@@ -205,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MailSentRouteImport
       parentRoute: typeof MailRoute
     }
+    '/mail/new': {
+      id: '/mail/new'
+      path: '/new'
+      fullPath: '/mail/new'
+      preLoaderRoute: typeof MailNewRouteImport
+      parentRoute: typeof MailRoute
+    }
     '/mail/inbox': {
       id: '/mail/inbox'
       path: '/inbox'
@@ -232,6 +251,7 @@ declare module '@tanstack/react-router' {
 interface MailRouteChildren {
   MailImportantRoute: typeof MailImportantRoute
   MailInboxRoute: typeof MailInboxRoute
+  MailNewRoute: typeof MailNewRoute
   MailSentRoute: typeof MailSentRoute
   MailSpamRoute: typeof MailSpamRoute
   MailTrashRoute: typeof MailTrashRoute
@@ -241,6 +261,7 @@ interface MailRouteChildren {
 const MailRouteChildren: MailRouteChildren = {
   MailImportantRoute: MailImportantRoute,
   MailInboxRoute: MailInboxRoute,
+  MailNewRoute: MailNewRoute,
   MailSentRoute: MailSentRoute,
   MailSpamRoute: MailSpamRoute,
   MailTrashRoute: MailTrashRoute,

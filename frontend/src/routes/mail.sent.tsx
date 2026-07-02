@@ -2,11 +2,12 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react';
 import { Trash2, Search, Reply, Forward, Star } from "lucide-react";
 import IframeEmailViewer from "../components/mail/IframeRenderBodyMail";
-
 import { useDecryptedBody } from "../hooks/useDecryptedBody";
 import { useTrashQuery } from "../hooks/useInboxQuery";
 import { useDecryptedHeaders } from "../hooks/useDecryptedHeaders";
 import { useMailActions } from "../hooks/useMailActions";
+
+import Tooltip from '@mui/material/Tooltip';
 
 export const Route = createFileRoute('/mail/sent')({
   component: Sent,
@@ -21,7 +22,7 @@ function Sent() {
   const { decryptedHeaders, setDecryptedHeaders } = useDecryptedHeaders(rawEmails, navigate);
   const currentMailHeader = decryptedHeaders[selected] ?? null;
   const currentRawMail = rawEmails[selected] ?? null;
-  const currentMailKey = currentRawMail ? String(currentRawMail.gmail_message_id) : null;
+  const currentMailKey = currentRawMail ? String(currentRawMail.message_id) : null;
 
   const { activeBody, isDecryptingBody } = useDecryptedBody(currentMailKey);
 
@@ -32,19 +33,19 @@ function Sent() {
     setDecryptedHeaders(curr => curr.map((item, idx) => idx === index ? { ...item, is_read: true } : item));
   };
 
-  const handleDeleteMail = async (gmail_message_id: string, is_deleted: boolean) => {
+  const handleDeleteMail = async (message_id: string, is_deleted: boolean) => {
     if (!currentRawMail) return;
     await deleteMail({
-      id: gmail_message_id,
+      id: message_id,
       is_deleted,
     });
   }
 
   // SỬA Ở ĐÂY: Dùng starMail thay cho starredEmail cũ
-  const handleStarMail = async (gmail_message_id: string, is_starred: boolean) => {
+  const handleStarMail = async (message_id: string, is_starred: boolean) => {
     if (!currentRawMail) return;
     await starMail({
-      id: gmail_message_id,
+      id: message_id,
       is_starred
     });
   }
@@ -88,7 +89,7 @@ function Sent() {
           ) : (
             decryptedHeaders.map((item, index) => (
               <div
-                key={item.gmail_message_id}
+                key={item.message_id}
                 onClick={() => handleSelectMail(index)}
                 className={`p-3 cursor-pointer transition-colors ${selected === index
                   ? item.is_read
@@ -131,10 +132,18 @@ function Sent() {
           <div className="flex flex-col min-h-0 h-screen overflow-hidden">
             {/* Thanh công cụ */}
             <div className="p-2 border-b border-[oklch(0.24_0.01_260)] flex gap-2">
-              <button onClick={() => handleDeleteMail(currentMailHeader.gmail_message_id, false)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Reply className="w-4 h-4" /></button>
-              <button className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Forward className="w-4 h-4" /></button>
-              <button onClick={() => handleStarMail(currentMailHeader.gmail_message_id, true)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white "><Star className="w-4 h-4" /></button>
-              <button onClick={() => handleDeleteMail(currentMailHeader.gmail_message_id, true)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-red-400"><Trash2 className="w-4 h-4" /></button>
+              <Tooltip title="Trả lời" arrow>
+                <button onClick={() => handleDeleteMail(currentMailHeader.message_id, false)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Reply className="w-4 h-4" /></button>
+              </Tooltip>
+              <Tooltip title="Chuyển tiếp" arrow>
+                <button className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Forward className="w-4 h-4" /></button>
+              </Tooltip>
+              <Tooltip title="Đánh dấu" arrow>
+                <button onClick={() => handleStarMail(currentMailHeader.message_id, true)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white "><Star className="w-4 h-4" /></button>
+              </Tooltip>
+              <Tooltip title="Xóa" arrow>
+                <button onClick={() => handleDeleteMail(currentMailHeader.message_id, true)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-red-400"><Trash2 className="w-4 h-4" /></button>
+              </Tooltip>
             </div>
 
             {/* Khung nội dung */}
@@ -163,7 +172,7 @@ function Sent() {
                 ) : activeBody ? (
                   activeBody.html ? (
                     // SỬA Ở ĐÂY: Thêm flex-1, w-full, và min-h-[65vh] (hoặc min-h-[500px])
-                    <div className="flex-1 w-full min-h-[77vh] rounded-md overflow-hidden bg-white">
+                    <div className="flex-1 w-full min-h-[77vh] overflow-hidden bg-white">
                       <IframeEmailViewer htmlContent={activeBody.html} />
                     </div>
                   ) : (

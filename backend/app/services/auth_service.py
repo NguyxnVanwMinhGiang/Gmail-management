@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.auth_schema import E2EEKeysUpdate, LoginRequestAdmin, RegisterRequest, LoginRequest, RegisterRequestAdmin, GoogleLoginRequest
-from app.repositories import user_repository, admin_repository, google_repository
+from app.repositories import user_repository, admin_repository, google_repository, email_repository
 from app.utils.hash_util import hash_password, verify_password
 from app.utils.jwt_util import generate_jwt_user, generate_jwt_admin, get_current_admin, get_current_user
 
@@ -39,6 +39,7 @@ class AuthServiceUser:
 
     def login(self, data: LoginRequest, db: Session):
         user = self.user_repository.find_by_email(db, data.email)
+        role = "user4u"
 
         if not user:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sai tai khoan hoac mat khau")
@@ -46,13 +47,19 @@ class AuthServiceUser:
         if not verify_password(data.password, str(user.password_hash)):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sai tai khoan hoac mat khau")
         
-        generate_token = generate_jwt_user(user.id, user.email)
+        generate_token = generate_jwt_user(user.id, user.email, role)
         
         return {
             "message": "Login successfully",
             "accessToken": generate_token["token"],
-            "tokenType": "bearer"
+            "tokenType": "bearer",
+            "user": {
+                "email": user.email,
+                "full_name": user.full_name,
+            }
         }
+    
+    
 
 
 class AuthServiceAdmin:
@@ -107,6 +114,7 @@ class GoogleLoginService:
 
     def refresh_access_token(self, code: str, db: Session):
         callApi = callAPToken(code)
+        role = "user"
 
         google_id = callApi["google_id"]
         full_name = callApi["full_name"]
@@ -134,7 +142,7 @@ class GoogleLoginService:
                 google_token_expires_at=google_token_expires_at
             )
         watchEmail(google_refresh_token)  # Gọi hàm watchEmail với refresh_token của người dùng
-        system_jwt_token = generate_jwt_user(user.google_id, email)
+        system_jwt_token = generate_jwt_user(user.google_id, email, role)
 
         return {
             "message": "Login successfully",
@@ -143,33 +151,105 @@ class GoogleLoginService:
             "user": {
                 "email": email,
                 "full_name": full_name,
-                "role": "user"
             }
         }
     
+class E2EEKeyService:
+    def __init__(self):
+        self.google_repository = google_repository
+        self.user_repository = user_repository
+
     def save_e2ee_keys(self, keys_data: E2EEKeysUpdate, token, db: Session):
-        user_id = get_current_user(token)
-        
-        user = self.google_repository.find_by_google_id(db, user_id)
-        if not user:
-            raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+        token_payload = get_current_user(token)
+        user_id = token_payload["user_id"]
+        user_role = token_payload["role"]
+        if user_role == "user":
+            try:
+                user = self.google_repository.find_by_google_id(db, user_id)
+                if not user:
+                    raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+                    
+                user.public_key = keys_data.public_key
+                user.encrypted_private_key = keys_data.encrypted_private_key
+                db.commit()
+            except Exception as e:
+                raise HTTPException(status_code=500, detail="Lỗi khi lưu bộ khóa E2EE")
+        else:
+            try:
+                user = self.user_repository.find_id_4u(db, user_id)
+                print("User found:", user)  # Debugging line to check if the user is found
+                if not user:
+                    raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+                    
+                user.public_key = keys_data.public_key
+                user.encrypted_private_key = keys_data.encrypted_private_key
+                db.commit()
+            except Exception as e:
+                raise HTTPException(status_code=500, detail="Lỗi khi lưu bộ khóa E2EE")
             
-        user.public_key = keys_data.public_key
-        user.encrypted_private_key = keys_data.encrypted_private_key
-        db.commit()
-        
         return {"message": "Đã lưu bộ khóa E2EE an toàn."}
 
     def get_e2ee_keys(self, token: str, db: Session):
-        user_id = get_current_user(token)
-    
-        user = self.google_repository.find_by_google_id(db, user_id)
-        if not user:
-            raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
-            
+        print("Token received for get_e2ee_keys:", token)  # Debugging line to check the token value
+        token_payload = get_current_user(token)
+
+        user_id = token_payload["user_id"]
+        user_role = token_payload["role"]
+
+        if user_role == "user":
+            try:
+                user = self.google_repository.find_by_google_id(db, user_id)
+                if not user:
+                    raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail="Lỗi khi lưu bộ khóa E2EE")
+        else:
+            try:
+                user = self.user_repository.find_id_4u(db, user_id)
+                if not user:
+                    raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail="Lỗi khi lưu bộ khóa E2EE")
+
         # Trả về khóa nếu đã thiết lập, hoặc null nếu là tài khoản mới
         return {
             "has_keys": bool(user.encrypted_private_key),
             "public_key": user.public_key,
             "encrypted_private_key": user.encrypted_private_key
+        }
+    
+class Me:
+    def __init__(self):
+        self.google_repository = google_repository
+        self.user_repository = user_repository
+        self.email_repository = email_repository
+
+    def get_info_me(self, token: str, db: Session):
+        token_payload = get_current_user(token)
+        user_id = token_payload["user_id"]
+        user_role = token_payload["role"]
+
+        if user_role == "user":
+            user = self.google_repository.find_by_google_id(db, user_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+            
+            total_emails = self.email_repository.count_email_by_userID(db, user.id, provider="google")
+            total_starred = self.email_repository.count_starred_email_by_userID(db, user.id, provider="google")
+            total_deleted = self.email_repository.count_deleted_email_by_userID(db, user.id, provider="google")
+        else:
+            user = self.user_repository.find_id_4u(db, user_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+            total_emails = self.email_repository.count_email_by_userID(db, user.id, provider=user_role)
+            total_starred = self.email_repository.count_starred_email_by_userID(db, user.id, provider=user_role)
+            total_deleted = self.email_repository.count_deleted_email_by_userID(db, user.id, provider=user_role)
+
+        print(total_emails, total_starred, total_deleted, user.id)  # Debugging line to check the counts
+        return {
+            "email": user.email,
+            "role": user_role,
+            "total_emails": total_emails,
+            "total_starred": total_starred,
+            "total_deleted": total_deleted
         }
