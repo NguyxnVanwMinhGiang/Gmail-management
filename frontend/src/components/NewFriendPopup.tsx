@@ -3,20 +3,50 @@ import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@
 import { UserRoundPlus } from 'lucide-react';
 import { Fragment, useState } from 'react';
 
-export default function PopupHeadless() {
+import { addFriend } from '../api/friends';
+import Tooltip from '@mui/material/Tooltip';
+
+export default function NewFriendPopup() {
   const [isOpen, setIsOpen] = useState(false);
   const [isAgree, setIsAgree] = useState(false);
+  const [formData, setFormData] = useState({
+    friendEmail: '',
+
+  });
+
+  const handleAddFriend = async () => {
+    if (!isAgree) {
+      alert("Vui lòng đồng ý với điều khoản.");
+      return;
+    }
+
+    try {
+      await addFriend(formData.friendEmail);
+
+      setIsOpen(false);
+      setIsAgree(false);
+      setFormData({
+        friendEmail: "",
+      });
+
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Có lỗi xảy ra");
+    }
+  };
+
   return (
     <div className="flex items-center justify-center">
       {/* Nút bấm để mở Popup */}
-      <button onClick={() => setIsOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded hover:bg-[oklch(0.22_0.01_260)] text-[oklch(0.7_0.01_260)]">
-        <UserRoundPlus className="w-3.5 h-3.5" />
-      </button>
+      <Tooltip title="Thêm bạn bè" arrow>
+        <button onClick={() => setIsOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded hover:bg-[oklch(0.22_0.01_260)] text-[oklch(0.7_0.01_260)]">
+          <UserRoundPlus className="w-3.5 h-3.5" />
+        </button>
+      </Tooltip>
 
       {/* Quản lý hiệu ứng đóng/mở tổng thể */}
       <Transition show={isOpen} as={Fragment} >
         <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)}>
-          
+
           {/* Lớp nền mờ (Backdrop) phía sau */}
           <TransitionChild
             as={Fragment}
@@ -33,7 +63,7 @@ export default function PopupHeadless() {
           {/* Vùng chứa căn giữa Popup */}
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4 text-center">
-              
+
               {/* Nội dung chính của Popup (Khung Dialog) */}
               <TransitionChild
                 as={Fragment}
@@ -131,7 +161,13 @@ export default function PopupHeadless() {
                       <h2 className="font-semibold text-gray-900">
                         Email của bạn bè:
                       </h2>
-                      <input type="text" placeholder="Nhập email bạn bè..." className="border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      <input
+                        type="text"
+                        placeholder="Nhập email bạn bè..."
+                        className="border border-gray-300 text-gray-900 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={formData.friendEmail}
+                        onChange={(e) => setFormData({ ...formData, friendEmail: e.target.value })}
+                      />
                     </div>
 
                     {/* Checkbox */}
@@ -146,7 +182,7 @@ export default function PopupHeadless() {
 
                       <span className="text-sm text-gray-700">
                         Tôi đã đọc và hiểu rằng chỉ <b>Public Key</b> sẽ được chia sẻ.
-                        Tôi đồng ý kết bạn để có thể trao đổi email được mã hóa đầu cuối. Chúng tôi sẽ không chịu trách nhiệm cho hành động này 
+                        Tôi đồng ý kết bạn để có thể trao đổi email được mã hóa đầu cuối. Chúng tôi sẽ không chịu trách nhiệm cho hành động này
                       </span>
 
                     </label>
@@ -172,14 +208,17 @@ export default function PopupHeadless() {
                       disabled={!isAgree}
                       onClick={() => {
                         alert("Đã xác nhận!");
+                        handleAddFriend();
                         setIsAgree(false);
                         setIsOpen(false);
+                        // setFormData({
+                        //   friendEmail: "",
+                        // });
                       }}
                       className={`rounded-lg px-5 py-2 text-sm font-medium text-white transition
-                        ${
-                          isAgree
-                            ? "bg-blue-600 hover:bg-blue-700"
-                            : "cursor-not-allowed bg-gray-300"
+                        ${isAgree
+                          ? "bg-blue-600 hover:bg-blue-700"
+                          : "cursor-not-allowed bg-gray-300"
                         }`}
                     >
                       Đồng ý

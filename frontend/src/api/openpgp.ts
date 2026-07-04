@@ -40,7 +40,6 @@ export async function decryptPGPText(encryptedText: string, privateKeyObj: openp
     });
     return decrypted as string;
   } catch (error) {
-    console.error("Lỗi giải mã trường dữ liệu:", error);
     return "--- Lỗi: Không thể giải mã nội dung này ---";
   }
 }

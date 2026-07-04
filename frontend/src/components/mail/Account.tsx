@@ -174,6 +174,8 @@ function Account({ email, totalEmails, totalStarred, totalDeleted, expanded }: A
     { icon: AlertOctagon, label: "Thư rác", to: "/mail/spam" }, // Nếu backend có total_spam thì thay vào đây
     { icon: Trash2, label: "Thùng rác", count: totalDeleted, to: "/mail/trash" },
     { icon: Star, label: "Quan trọng", count: totalStarred, to: "/mail/important", accent: "amber" },
+    { icon: Star, label: "Group", count: totalStarred, to: "/mail/important", accent: "amber" },
+    
   ];
 
   return (

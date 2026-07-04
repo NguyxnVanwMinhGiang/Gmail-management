@@ -56,11 +56,10 @@
 
 # print(email)
 
-def getAB():
-    a = 10
-    b = 12
-    return {"a": a, "b": b}
-
-a = getAB()
-
-print(a["a"])
+# def check_email_domain(v: str) -> str:
+#     if not (v.endswith("@gmail.com") or v.endswith("@mail.foryou")):
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Email bắt buộc phải có đuôi @gmail.com hoặc @mail.foryou"
+#         )
+#     return v

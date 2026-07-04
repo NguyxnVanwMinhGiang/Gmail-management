@@ -53,15 +53,6 @@ def delete_user_gg(db: Session, user_gg_id: int):
 def find_by_google_account(db: Session, email: str):
     return db.query(Users_gg).filter(Users_gg.email == email).first()
 
-# def find_by_id(db: Session, user_id: int):
-#     return db.query(Users_gg).filter(Users_gg.id == user_id).first()
-
-def get_id_by_google_id(db: Session, google_id: str):
-    user_gg = db.query(Users_gg).filter(Users_gg.google_id == google_id).first()
-    if user_gg:
-        return user_gg.id
-    return None
-
 def find_by_google_id(db: Session, google_id: str):
     return db.query(Users_gg).filter(Users_gg.google_id == str(google_id)).first()
 

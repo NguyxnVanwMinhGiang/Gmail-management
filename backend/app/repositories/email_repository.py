@@ -23,6 +23,7 @@ def add_email_to_database(
     is_read: bool = False,
     is_starred: bool = False,
     is_deleted: bool = False,
+    is_spam: bool = False,
     sent_at: datetime.datetime | None = None,
     received_at: datetime.datetime | None = None
 ):
@@ -40,6 +41,7 @@ def add_email_to_database(
         is_read=is_read,
         is_starred=is_starred,
         is_deleted=is_deleted,
+        is_spam=is_spam,
         sent_at=sent_at,
         received_at=received_at
     )
@@ -138,6 +140,7 @@ def set_starred_email(db: Session, user_id: int, message_id: str, is_starred: bo
             email.is_starred = False
 
         email.is_deleted = False  # Khi đánh dấu là starred, email sẽ không còn bị xóa
+        email.is_spam = False  # Khi đánh dấu là starred, email sẽ không còn bị spam
         db.commit()
         db.refresh(email)
 
@@ -150,6 +153,20 @@ def set_deleted_email(db: Session, user_id: int, message_id: str, is_deleted: bo
             email.is_deleted = False
             
         email.is_starred = False  # Khi đánh dấu là deleted, email sẽ không còn bị starred
+        email.is_spam = False  # Khi đánh dấu là deleted, email sẽ không còn bị spam
+        db.commit()
+        db.refresh(email)
+
+def set_spam_email(db: Session, user_id: int, message_id: str, is_spam: bool):
+    email = db.query(Email).filter(Email.user_id == user_id, Email.message_id == message_id).first()
+    if email and not email.is_spam:
+        if is_spam:
+            email.is_spam = True
+        else:
+            email.is_spam = False
+
+        email.is_starred = False
+        email.is_deleted = False
         db.commit()
         db.refresh(email)
 
@@ -158,3 +175,9 @@ def delete_email(db: Session, user_id: int, message_id: str):
     if email:
         db.delete(email)
         db.commit()
+
+def set_email_sent(db: Session, email_from: str):
+    email_entry = db.query(Email).filter(Email.email_from == email_from).first()
+    if email_entry:
+        db.commit()
+        db.refresh(email_entry) 

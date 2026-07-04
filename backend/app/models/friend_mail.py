@@ -6,14 +6,14 @@ from sqlalchemy.sql import func
 from app.core.database import Base
 
 
-class Email(Base):
-    __tablename__ = "emails"
+class FriendMails(Base):
+    __tablename__ = "friend_mails"
 
     id = Column(BigInteger, primary_key=True, index=True)
 
-    user_id = Column(BigInteger, nullable=False, index=True)
+    user_id_to = Column(BigInteger, nullable=False)
+    user_id_sent = Column(BigInteger, nullable=False)
 
-    provider = Column(String(50), nullable=False, default="google")
     message_id = Column(String(255), nullable=False)
 
     email_from = Column(Text, nullable=True)
@@ -29,8 +29,7 @@ class Email(Base):
     is_read = Column(Boolean, default=False)
     is_starred = Column(Boolean, default=False)
     is_deleted = Column(Boolean, default=False)
-    is_spam = Column(Boolean, default=False)
-    
+
     sent_at = Column(DateTime, nullable=True)
     received_at = Column(DateTime, nullable=True)
 
@@ -40,7 +39,11 @@ class Email(Base):
         default=func.current_timestamp(),
         onupdate=func.current_timestamp()
     )
-
     __table_args__ = (
-        UniqueConstraint("user_id", "message_id", name="uq_user_gmail_message"),
+        UniqueConstraint(
+            "user_id_sent",
+            "user_id_to",
+            "message_id",
+            name="uq_friend_mail"
+        ),
     )

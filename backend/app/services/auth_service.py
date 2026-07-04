@@ -17,7 +17,7 @@ class AuthServiceUser:
     
     def register(self, data: RegisterRequest, db: Session):
         email = f"{data.email}{self.EMAIL_DOMAIN}"
-        existing_user = self.user_repository.find_by_email(db, email)
+        existing_user = self.user_repository.find_email_4u(db, email)
 
         if existing_user:
             raise HTTPException(
@@ -38,7 +38,7 @@ class AuthServiceUser:
         }
 
     def login(self, data: LoginRequest, db: Session):
-        user = self.user_repository.find_by_email(db, data.email)
+        user = self.user_repository.find_email_4u(db, data.email)
         role = "user4u"
 
         if not user:

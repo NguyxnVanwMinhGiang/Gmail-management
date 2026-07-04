@@ -44,7 +44,7 @@ export const useDecryptedHeaders = (rawEmails: any[], navigate: any) => {
 
         if (!isCancelled) startTransition(() => setDecryptedHeaders(updatedList));
       } catch (err) {
-        console.error("Lỗi giải mã danh sách:", err);
+        console.error("Lỗi giải mã danh sách:");
       }
     };
 

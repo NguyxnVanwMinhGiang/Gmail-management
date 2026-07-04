@@ -1,9 +1,11 @@
 // Trong file mail.tsx
 import { createFileRoute, Outlet, redirect, Link } from '@tanstack/react-router'
-import { Cloud, RefreshCw, Plus } from 'lucide-react'
+import { RefreshCw, Plus } from 'lucide-react'
 import { useState, useEffect } from 'react' // BỔ SUNG IMPORT STATE/EFFECT
 import Account from '../components/mail/Account'
-import PopupHeadless  from '../components/PopupHeadless'
+import NewFriendPopup  from '../components/NewFriendPopup'
+import FriendRequestPopup  from '../components/ FriendRequestPopup'
+
 import { asyncGmail, getInbox } from '../api/mail'
 import { Tooltip } from '@mui/material';
 import { getCurrentUser, type UserInfo } from '../api/auth' // BỔ SUNG IMPORT HÀM API
@@ -62,7 +64,6 @@ function SideBar() {
     <div className="flex h-screen w-screen overflow-hidden bg-[oklch(0.16_0.01_260)] text-[oklch(0.92_0.01_260)] font-sans text-[13px]">
       <aside className="w-64 shrink-0 border-r border-[oklch(0.24_0.01_260)] bg-[oklch(0.15_0.01_260)] flex flex-col h-full">
         <div className="flex items-center justify-between px-3 py-2.5">
-          <button className="p-1.5 rounded hover:bg-[oklch(0.22_0.01_260)] text-[oklch(0.7_0.01_260)]"><Cloud className="w-4 h-4" /></button>
           <Link to="/mail/new" className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[oklch(0.55_0.18_255)] hover:bg-[oklch(0.6_0.18_255)] text-white text-xs font-medium shadow-sm">
             <Plus className="w-3.5 h-3.5" /> Thư mới
           </Link>
@@ -71,9 +72,9 @@ function SideBar() {
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
           </Tooltip>
-          <Tooltip title="Thêm bạn bè" arrow>
-            <PopupHeadless />
-          </Tooltip>
+
+          <NewFriendPopup />
+          <FriendRequestPopup />
         </div>
 
         <div className="px-2 py-1 overflow-y-auto flex-1">

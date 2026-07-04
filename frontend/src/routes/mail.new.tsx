@@ -2,6 +2,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { PencilLine } from 'lucide-react';
 import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useSendMail } from '../hooks/useSend';
+import { useFriendRequests } from '../hooks/useFriend';
+import { listFriend } from '../api/friends'
 
 export const Route = createFileRoute('/mail/new')({
   component: New,
@@ -12,7 +14,7 @@ function New() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const { sendMail, loadingMail } = useSendMail();
-  
+  const { friends, loading, loadListFriend } = useFriendRequests();
   // State quản lý form dữ liệu text
   const [formData, setFormData] = useState({
     to: '',
@@ -65,22 +67,79 @@ function New() {
     setFiles(prev => prev.filter((_, i) => i !== index));
     setFiles([]);
   }
+  
 
   return (
     <div className="flex h-full w-full bg-[oklch(0.16_0.01_260)] text-[oklch(0.7_0.01_260)] flex-col md:flex-row overflow-hidden">
-      {/* CỘT TRÁI: DANH SÁCH Yeu thich */}
-      <div className="w-full md:w-1/3 border-r border-[oklch(0.24_0.01_260)] flex flex-col h-full">
+      <div className="w-full md:w-1/3 flex flex-row h-full"> {/* Thay flex-col thành flex-row, có thể chỉnh lại w-2/3 hoặc w-full tùy layout tổng của bạn */}
+        
+        <div className="w-1/2 border-r border-[oklch(0.24_0.01_260)] flex flex-col h-full">
           <div className="p-4 border-b border-[oklch(0.24_0.01_260)] bg-[oklch(0.12_0.01_260)]">
-              <div className="relative text-center py-1 px-4">
-                  <span className="text-[oklch(0.85_0.01_260)] font-medium tracking-wide">
-                  Danh sách yêu thích
-                  </span>
+            <div className="relative text-center py-1 px-4">
+              <span className="text-[oklch(0.85_0.01_260)] font-medium tracking-wide">
+                Danh sách bạn bè
+              </span>
+            </div>
+          </div>
+          {/* Thêm dữ liệu flex-1 ở đây để vùng này chiếm trọn chiều cao còn lại và có thể cuộn dọc */}
+          <div className="flex-1 overflow-y-auto divide-y divide-[oklch(0.2_0.01_260)] p-4">
+            {loading ? (
+              // Trạng thái đang tải dữ liệu
+              <div className="text-center py-4 text-[oklch(0.6_0.01_260)] text-sm animate-pulse">
+                Đang tải danh sách...
               </div>
-          </div>
+            ) : friends.length === 0 ? (
+              // Trạng thái trống
+              <div className="text-center py-8 text-[oklch(0.5_0.01_260)] text-sm">
+                Chưa có người bạn nào.
+              </div>
+            ) : (
+              // Render danh sách bạn bè khi có dữ liệu
+              friends.map((friend) => (
+                <div 
+                  key={friend.friend_id} 
+                  className="flex items-center justify-between py-3 px-3 hover:bg-[oklch(0.18_0.01_260)] transition-colors rounded-lg group cursor-pointer border-none"
+                >
+                  {/* Bên trái: Avatar tự tạo bằng chữ đầu + Thông tin tên/domain */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[oklch(0.24_0.01_260)] flex items-center justify-center text-[oklch(0.85_0.01_260)] font-bold uppercase border border-[oklch(0.3_0.01_260)] group-hover:border-[oklch(0.5_0.01_260)] transition-colors">
+                      {friend.domain ? friend.domain[0] : '?'}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[oklch(0.85_0.01_260)] font-medium text-sm group-hover:text-white transition-colors">
+                        {friend.domain}
+                      </span>
+                      <span className="text-[oklch(0.5_0.01_260)] text-xs">
+                        ID: {friend.friend_id}
+                      </span>
+                    </div>
+                  </div>
 
-          <div className="flex-1 overflow-y-auto divide-y divide-[oklch(0.2_0.01_260)]">
-          asdsd
+                  {/* Bên phải: Ngày kết bạn (nhỏ gọn) */}
+                  <div className="text-[oklch(0.45_0.01_260)] text-[11px] text-right whitespace-nowrap hidden sm:block">
+                    {friend.created_at ? friend.created_at.split(' ')[0] : ''}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
+        </div>
+
+        {/* CỘT BÊN PHẢI */}
+        <div className="w-1/2 flex flex-col h-full">
+          <div className="p-4 border-b border-[oklch(0.24_0.01_260)] bg-[oklch(0.12_0.01_260)]">
+            <div className="relative text-center py-1 px-4">
+              <span className="text-[oklch(0.85_0.01_260)] font-medium tracking-wide">
+                Mô tả thông tin
+              </span>
+            </div>
+          </div>
+          {/* Thêm flex-1 tương tự để đồng bộ cuộn độc lập với cột trái */}
+          <div className="flex-1 overflow-y-auto divide-y divide-[oklch(0.2_0.01_260)] p-4">
+            asdsd
+          </div>
+        </div>
+
       </div>
 
       {/* CỘT PHẢI: NỘI DUNG CHI TIẾT EMAIL */}

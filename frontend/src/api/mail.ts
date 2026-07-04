@@ -28,7 +28,7 @@ export type EamilAction = {
 }
 
 
-export type EmailSend ={
+export type EmailSend = {
   provider: string;
   message_id: string;
   email_from?: string | null;
