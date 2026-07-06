@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, File, Header, Path, Query, Form, UploadF
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.services.friend_service import FriendService
+from app.services.friendMail_service import friendMailService
 from pydantic import BaseModel, EmailStr
 
 router = APIRouter()
@@ -43,3 +44,56 @@ def block_user(token: str = Header(..., alias="Authorization"), target_mail: Ema
 @router.get("/list")
 def get_list_friends(token: str = Header(..., alias="Authorization"), db: Session = Depends(get_db)):
     return FriendService().get_list_friends(db=db, token=token)
+
+
+@router.get("/inbox")
+def get_friend_inbox(
+    token: str = Header(..., alias="Authorization"),
+    db: Session = Depends(get_db),
+    friend_id: int = Query(..., ge=1),
+    page: int = Query(1, ge=1),
+    limit: int = Query(30, ge=1, le=100),
+):
+    skip = (page - 1) * limit
+    return friendMailService().get_friendemail_header(
+        db=db,
+        token=token,
+        skip=skip,
+        limit=limit,
+        is_deleted=False,
+        friend_id=friend_id,
+    )
+
+
+@router.get("/sent")
+def get_friend_sent(
+    token: str = Header(..., alias="Authorization"),
+    db: Session = Depends(get_db),
+    friend_id: int = Query(..., ge=1),
+    page: int = Query(1, ge=1),
+    limit: int = Query(30, ge=1, le=100),
+):
+    skip = (page - 1) * limit
+    return friendMailService().get_friendemail_sent_header(
+        db=db,
+        token=token,
+        skip=skip,
+        limit=limit,
+        is_deleted=False,
+        friend_id=friend_id,
+    )
+
+
+@router.get("/id/{message_id}")
+def get_friend_email_body(
+    token: str = Header(..., alias="Authorization"),
+    message_id: str = Path(..., description="ID của email trong database"),
+    db: Session = Depends(get_db),
+    friend_id: int | None = Query(None, ge=1),
+):
+    return friendMailService().get_email_body_by_id(
+        db=db,
+        token=token,
+        message_id=message_id,
+        friend_id=friend_id,
+    )

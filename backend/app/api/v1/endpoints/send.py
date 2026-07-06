@@ -29,3 +29,25 @@ def send_email(
         message_id=message_id
     )
 
+@router.post("/send_friend")
+def send_email_friend(
+    token: str = Header(..., alias="Authorization"),
+    db: Session = Depends(get_db),
+
+    to: str = Form(...),
+    subject: str = Form(...),
+    content: str = Form(...),
+    message_id: str = Form(...),
+
+    file_: List[UploadFile] = File(default=[]),
+):
+    return SendMailService().send_email_friend(
+        db=db,
+        token=token,
+        to=to,
+        subject=subject,
+        content=content,
+        file_=file_,
+        message_id=message_id
+    )
+# send_email_friend

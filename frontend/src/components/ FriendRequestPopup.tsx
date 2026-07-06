@@ -2,7 +2,7 @@ import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@
 
 import { Check, UserRound, Users, X } from 'lucide-react';
 import { Fragment, useState } from 'react';
-import { useFriendRequests } from '../hooks/useFriend';
+import { useFriendRequests } from '../hooks/friend/useFriend';
 import { Tooltip } from '@mui/material';
 
 const formatRequestTime = (createdAt: string) => {
@@ -23,7 +23,7 @@ const formatRequestTime = (createdAt: string) => {
 
 export default function FriendRequestPopup() {
   const [isOpen, setIsOpen] = useState(false);
-  const { requests, loading, error, actionLoadingId, acceptRequest, rejectRequest } = useFriendRequests();
+  const { requests, loadingFriendRequests, error, actionLoadingId, acceptRequest, rejectRequest } = useFriendRequests();
 
   return (
     <div className="flex items-center justify-center">
@@ -78,25 +78,25 @@ export default function FriendRequestPopup() {
                     </div>
 
                     <div className="mt-6 space-y-3">
-                      {loading && (
+                      {loadingFriendRequests && (
                         <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm text-gray-500">
                           Đang tải lời mời kết bạn...
                         </div>
                       )}
 
-                      {!loading && error && (
+                      {!loadingFriendRequests && error && (
                         <div className="rounded-lg border border-red-100 bg-red-50 p-4 text-sm text-red-600">
                           {error}
                         </div>
                       )}
 
-                      {!loading && !error && requests.length === 0 && (
+                      {!loadingFriendRequests && !error && requests.length === 0 && (
                         <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm text-gray-500">
                           Hiện chưa có lời mời kết bạn nào.
                         </div>
                       )}
 
-                      {!loading && requests.map((request) => {
+                      {!loadingFriendRequests && requests.map((request) => {
                         const isProcessing = actionLoadingId === request.friendship_id;
 
                         return (

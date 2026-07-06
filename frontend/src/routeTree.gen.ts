@@ -19,6 +19,7 @@ import { Route as MailSentRouteImport } from './routes/mail.sent'
 import { Route as MailNewRouteImport } from './routes/mail.new'
 import { Route as MailInboxRouteImport } from './routes/mail.inbox'
 import { Route as MailImportantRouteImport } from './routes/mail.important'
+import { Route as MailFriendsRouteImport } from './routes/mail.friends'
 import { Route as MailGroupsGroupIdRouteImport } from './routes/mail.groups.$groupId'
 
 const MailRoute = MailRouteImport.update({
@@ -71,6 +72,11 @@ const MailImportantRoute = MailImportantRouteImport.update({
   path: '/important',
   getParentRoute: () => MailRoute,
 } as any)
+const MailFriendsRoute = MailFriendsRouteImport.update({
+  id: '/friends',
+  path: '/friends',
+  getParentRoute: () => MailRoute,
+} as any)
 const MailGroupsGroupIdRoute = MailGroupsGroupIdRouteImport.update({
   id: '/groups/$groupId',
   path: '/groups/$groupId',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/e2ee': typeof E2eeRoute
   '/login': typeof LoginRoute
   '/mail': typeof MailRouteWithChildren
+  '/mail/friends': typeof MailFriendsRoute
   '/mail/important': typeof MailImportantRoute
   '/mail/inbox': typeof MailInboxRoute
   '/mail/new': typeof MailNewRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/e2ee': typeof E2eeRoute
   '/login': typeof LoginRoute
   '/mail': typeof MailRouteWithChildren
+  '/mail/friends': typeof MailFriendsRoute
   '/mail/important': typeof MailImportantRoute
   '/mail/inbox': typeof MailInboxRoute
   '/mail/new': typeof MailNewRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/e2ee': typeof E2eeRoute
   '/login': typeof LoginRoute
   '/mail': typeof MailRouteWithChildren
+  '/mail/friends': typeof MailFriendsRoute
   '/mail/important': typeof MailImportantRoute
   '/mail/inbox': typeof MailInboxRoute
   '/mail/new': typeof MailNewRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/e2ee'
     | '/login'
     | '/mail'
+    | '/mail/friends'
     | '/mail/important'
     | '/mail/inbox'
     | '/mail/new'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/e2ee'
     | '/login'
     | '/mail'
+    | '/mail/friends'
     | '/mail/important'
     | '/mail/inbox'
     | '/mail/new'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/e2ee'
     | '/login'
     | '/mail'
+    | '/mail/friends'
     | '/mail/important'
     | '/mail/inbox'
     | '/mail/new'
@@ -238,6 +250,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MailImportantRouteImport
       parentRoute: typeof MailRoute
     }
+    '/mail/friends': {
+      id: '/mail/friends'
+      path: '/friends'
+      fullPath: '/mail/friends'
+      preLoaderRoute: typeof MailFriendsRouteImport
+      parentRoute: typeof MailRoute
+    }
     '/mail/groups/$groupId': {
       id: '/mail/groups/$groupId'
       path: '/groups/$groupId'
@@ -249,6 +268,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface MailRouteChildren {
+  MailFriendsRoute: typeof MailFriendsRoute
   MailImportantRoute: typeof MailImportantRoute
   MailInboxRoute: typeof MailInboxRoute
   MailNewRoute: typeof MailNewRoute
@@ -259,6 +279,7 @@ interface MailRouteChildren {
 }
 
 const MailRouteChildren: MailRouteChildren = {
+  MailFriendsRoute: MailFriendsRoute,
   MailImportantRoute: MailImportantRoute,
   MailInboxRoute: MailInboxRoute,
   MailNewRoute: MailNewRoute,

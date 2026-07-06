@@ -18,16 +18,14 @@ class FriendMails(Base):
 
     email_from = Column(Text, nullable=True)
     email_to = Column(Text, nullable=True)
-    subject = Column(Text, nullable=True)
 
+    subject = Column(Text, nullable=True)
     body_text = Column(Text, nullable=True)
     body_html = Column(Text, nullable=True)
     snippet = Column(Text, nullable=True)
-
     file_ = Column(Text, nullable=True)
 
     is_read = Column(Boolean, default=False)
-    is_starred = Column(Boolean, default=False)
     is_deleted = Column(Boolean, default=False)
 
     sent_at = Column(DateTime, nullable=True)

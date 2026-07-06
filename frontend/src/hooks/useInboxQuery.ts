@@ -1,6 +1,6 @@
 // src/hooks/useInbox.ts
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { getInbox, getStarred, getTrash } from "../api/mail";
+import { getInbox, getStarred, getTrash, getSpams, getSent } from "../api/mail";
 import { useMemo } from "react";
 
 export const useInboxQuery = () => {
@@ -51,6 +51,50 @@ export const useStarredQuery = () => {
   const query = useInfiniteQuery({
     queryKey: ["starred"],
     queryFn: ({ pageParam = 1 }) => getStarred(pageParam as number, 20),
+    initialPageParam: 1,
+    refetchInterval: 300000,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length === 20 ? allPages.length + 1 : undefined;
+    },
+    staleTime: 2000 * 60,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  // Gộp các page lại thành 1 mảng phẳng luôn cho tiện
+  const rawEmails = useMemo(() => {
+    return query.data?.pages.flat() || [];
+  }, [query.data]);
+
+  return { ...query, rawEmails };
+};
+
+export const useSpamQuery = () => {
+  const query = useInfiniteQuery({
+    queryKey: ["spam"],
+    queryFn: ({ pageParam = 1 }) => getSpams(pageParam as number, 20),
+    initialPageParam: 1,
+    refetchInterval: 300000,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length === 20 ? allPages.length + 1 : undefined;
+    },
+    staleTime: 2000 * 60,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  // Gộp các page lại thành 1 mảng phẳng luôn cho tiện
+  const rawEmails = useMemo(() => {
+    return query.data?.pages.flat() || [];
+  }, [query.data]);
+
+  return { ...query, rawEmails };
+};
+
+export const useSentQuery = () => {
+  const query = useInfiniteQuery({
+    queryKey: ["sent"],
+    queryFn: ({ pageParam = 1 }) => getSent(pageParam as number, 20),
     initialPageParam: 1,
     refetchInterval: 300000,
     getNextPageParam: (lastPage, allPages) => {

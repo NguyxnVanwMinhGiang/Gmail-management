@@ -1,183 +1,234 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react';
-import {Trash2, Search, Reply, Forward, Star} from "lucide-react";
-import IframeEmailViewer from "../components/mail/IframeRenderBodyMail";
-
-import {useDecryptedBody} from "../hooks/useDecryptedBody";
-import {useInboxQuery} from "../hooks/useInboxQuery";
-import {useDecryptedHeaders} from "../hooks/useDecryptedHeaders";
-import {useMailActions} from "../hooks/useMailActions";
+import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router'
+import { useEffect, useMemo, useState } from 'react'
+import IframeEmailViewer from '../components/mail/IframeRenderBodyMail'
+import { useDecryptedBody } from '../hooks/useDecryptedBody'
+import { useDecryptedHeaders } from '../hooks/useDecryptedHeaders'
+import { useGroupEmails } from '../hooks/useEmailGroups'
 
 export const Route = createFileRoute('/mail/groups/$groupId')({
   component: GroupPage,
 })
 
+// Hàm hỗ trợ tách Domain từ chuỗi email (vd: "User <user@gmail.com>" -> "gmail.com")
+const extractDomain = (value?: string | null) => {
+  if (!value) return 'Khác'
+  
+  // Dùng Regex lấy đoạn ký tự nằm trong dấu < > nếu có (VD: <a@gmail.com>)
+  const match = value.match(/<([^>]+)>/)
+  if (match && match[1]) {
+    return match[1].toLowerCase().trim()
+  }
+
+  // Nếu không có dấu < >, thử dùng Regex cơ bản tìm email trong chuỗi
+  const emailMatch = value.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)
+  return emailMatch ? emailMatch[0].toLowerCase().trim() : 'Khác'
+}
+
 function GroupPage() {
-  const navigate = useNavigate();
-  const [selected, setSelected] = useState<number>(0);
+  const navigate = useNavigate()
+  const { groupId } = useParams({ from: '/mail/groups/$groupId' })
+  const groupIdNumber = Number(groupId)
+  
+  // State quản lý Domain và Email được chọn
+  const [selectedDomain, setSelectedDomain] = useState<string | null>(null)
+  const [selectedMessageId, setSelectedMessageId] = useState<string | number | null>(null)
 
-  const { rawEmails, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useInboxQuery();
+  const { data, isLoading, error } = useGroupEmails(groupIdNumber)
+  const rawEmails = useMemo(() => data?.items?.map((item) => item.email) || [], [data])
+  const { decryptedHeaders, setDecryptedHeaders } = useDecryptedHeaders(rawEmails, navigate)
 
-  const { decryptedHeaders, setDecryptedHeaders } = useDecryptedHeaders(rawEmails, navigate);
-  const currentMailHeader = decryptedHeaders[selected] ?? null;
-  const currentRawMail = rawEmails[selected] ?? null;
-  const currentMailKey = currentRawMail ? String(currentRawMail.message_id) : null;
+  // Nhóm các header theo Domain
+  const domainGroups = useMemo(() => {
+    const groups: Record<string, typeof decryptedHeaders> = {}
+    decryptedHeaders.forEach((header) => {
+      const domain = extractDomain(header.email_from || header.email_to || undefined)
+      if (!groups[domain]) groups[domain] = []
+      groups[domain].push(header)
+    })
+    return groups
+  }, [decryptedHeaders])
 
-  const { activeBody, isDecryptingBody } = useDecryptedBody(currentMailKey);
+  const domains = Object.keys(domainGroups).sort()
+  const emailsInSelectedDomain = selectedDomain ? domainGroups[selectedDomain] : []
 
-  const { deleteMail, starMail } = useMailActions();
+  // Tìm header và raw mail hiện tại dựa trên message_id thay vì index
+  const currentMailHeader = selectedMessageId
+    ? decryptedHeaders.find((h) => h.message_id === selectedMessageId) || null
+    : null
+    
+  const currentRawMail = selectedMessageId
+    ? rawEmails.find((r) => r.message_id === selectedMessageId) || null
+    : null
+    
+  const currentMailKey = currentRawMail ? String(currentRawMail.message_id) : null
+  const { activeBody, isDecryptingBody } = useDecryptedBody(currentMailKey)
 
-  const handleSelectMail = (index: number) => {
-    setSelected(index);
-    setDecryptedHeaders(curr => curr.map((item, idx) => idx === index ? { ...item, is_read: true } : item));
-  };
+  // Reset state khi đổi group
+  useEffect(() => {
+    setSelectedDomain(null)
+    setSelectedMessageId(null)
+    setDecryptedHeaders([])
+  }, [groupIdNumber, setDecryptedHeaders])
 
-  const handleDeleteMail = async ({message_id, is_deleted}: {message_id: string, is_deleted: boolean}) => {
-    if (!currentRawMail) return;
-    await deleteMail({id: message_id, is_deleted});
+  // Xử lý khi chọn Domain
+  const handleSelectDomain = (domain: string) => {
+    setSelectedDomain(domain)
+    setSelectedMessageId(null) // Reset email body khi đổi domain
   }
 
-  // SỬA Ở ĐÂY: Dùng starMail thay cho starredEmail cũ
-  const handleStarMail = async ({message_id, is_starred}: {message_id: string, is_starred: boolean}) => {
-    if (!currentRawMail) return;
-    await starMail({id: message_id, is_starred});
-  }
-
-  // Logic cuộn tải thêm trang
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
-    const bottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 50;
-    if (bottom && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  };
-
-  if (isLoading) {
-    return <div className="flex h-full items-center justify-center text-white bg-[oklch(0.16_0.01_260)]">Đang tải hộp thư...</div>;
-  }
-
-  if (error) {
-    return <div className="flex h-full items-center justify-center text-red-400 bg-[oklch(0.16_0.01_260)]">Lỗi: {(error as Error).message}</div>;
+  // Xử lý khi chọn Email Header
+  const handleSelectMail = (messageId: string | number) => {
+    setSelectedMessageId(messageId)
+    setDecryptedHeaders((curr) =>
+      curr.map((item) => (item.message_id === messageId ? { ...item, is_read: true } : item))
+    )
   }
 
   return (
-    <div className="flex h-full w-full bg-[oklch(0.16_0.01_260)] text-[oklch(0.7_0.01_260)] flex-col md:flex-row overflow-hidden">
-
-      {/* CỘT TRÁI: DANH SÁCH EMAIL */}
-      <div className="w-full md:w-1/3 border-r border-[oklch(0.24_0.01_260)] flex flex-col h-full">
-        <div className="p-2 border-b border-[oklch(0.24_0.01_260)]">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-[oklch(0.5_0.01_260)]" />
-            <input
-              type="search"
-              placeholder="Tìm kiếm thư..."
-              className="w-full bg-[oklch(0.12_0.01_260)] pl-9 pr-4 py-2 rounded border border-[oklch(0.24_0.01_260)] text-sm text-white"
-            />
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto divide-y divide-[oklch(0.2_0.01_260)]" onScroll={handleScroll}>
-          {decryptedHeaders.length === 0 ? (
-            <div className="p-4 text-center text-sm text-[oklch(0.5_0.01_260)]">Không có thư nào trong hộp thư.</div>
-          ) : (
-            decryptedHeaders.map((item, index) => (
-              <div
-                key={item.message_id}
-                onClick={() => handleSelectMail(index)}
-                className={`p-3 cursor-pointer transition-colors ${selected === index
-                  ? item.is_read
-                    ? "bg-[oklch(0.2_0.01_260)] text-white"
-                    : "bg-[oklch(0.28_0.03_255)] text-white shadow-[inset_0_0_0_1px_oklch(0.42_0.04_255)]"
-                  : item.is_read
-                    ? "hover:bg-[oklch(0.2_0.01_260)]"
-                    : "bg-[oklch(0.28_0.03_255)] hover:bg-[oklch(0.3_0.03_255)] text-white shadow-[inset_0_0_0_1px_oklch(0.42_0.04_255)]"
-                  }`}
-              >
-                <div className="flex justify-between items-start mb-1">
-                  <span className={`text-sm truncate pr-2 ${!item.is_read ? "font-bold text-white" : ""}`}>
-                    {item.email_from?.split("<")[0].trim() || "Ẩn danh"}
-                  </span>
-                  <span className="text-xs text-[oklch(0.5_0.01_260)] whitespace-nowrap">
-                    {item.received_at ? new Date(item.received_at).toLocaleDateString("vi-VN") : ""}
-                  </span>
-                </div>
-                <div className={`text-xs truncate mb-1 ${!item.is_read ? "font-semibold text-[oklch(0.85_0.02_255)]" : ""}`}>
-                  {item.subject || "(Không có tiêu đề)"}
-                </div>
-                <div className="text-xs text-[oklch(0.5_0.01_260)] truncate">
-                  {item.snippet}
-                </div>
+    <div> 
+      <div className="justify-center flex items-center gap-1 border-b border-[oklch(0.24_0.01_260)] bg-[oklch(0.12_0.01_260)] p-4 text-[oklch(0.85_0.01_260)]">
+        <h1 className="text-2xl font-semibold">Nhóm: {data?.group?.name || 'Nhóm'}</h1>
+        {data?.group?.description && <p className="text-sm text-[oklch(0.65_0.01_260)]">({data.group.description})</p>}
+     </div>
+      <div className="flex h-screen w-full flex-col overflow-hidden bg-[oklch(0.16_0.01_260)] text-[oklch(0.7_0.01_260)] lg:flex-row">
+        
+        {/* --- CỘT 1: DANH SÁCH DOMAIN --- */}
+        <div className="flex h-full w-full min-w-0 lg:w-[42%] xl:w-[38%]">
+          <div className="flex h-full w-[40%] min-w-62.5 max-w-85 flex-col border-r border-[oklch(0.24_0.01_260)]">
+            <div className="border-b border-[oklch(0.24_0.01_260)] bg-[oklch(0.12_0.01_260)] p-4">
+              <div className="relative px-4 py-1 text-center">
+                <span className="font-medium tracking-wide text-[oklch(0.85_0.01_260)]">Danh sách Domain</span>
               </div>
-            ))
-          )}
-
-          {isFetchingNextPage && (
-            <div className="p-4 text-center text-sm text-[oklch(0.5_0.01_260)]">
-              Đang tải thêm thư...
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* CỘT PHẢI: NỘI DUNG CHI TIẾT EMAIL */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 h-screen bg-[oklch(0.14_0.01_260)]">
-        {currentMailHeader ? (
-          <div className="flex flex-col min-h-0 h-screen overflow-hidden">
-            {/* Thanh công cụ */}
-            <div className="p-2 border-b border-[oklch(0.24_0.01_260)] flex gap-2">
-              <button onClick={() => handleDeleteMail({message_id: currentMailHeader.message_id, is_deleted: true})} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Reply className="w-4 h-4" /></button>
-              <button className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Forward className="w-4 h-4" /></button>
-              {currentMailHeader.is_starred ? (
-                <button onClick={() => handleStarMail({message_id: currentMailHeader.message_id, is_starred: false})} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white bg-amber-400"><Star className="w-4 h-4" /></button>
+            <div className="flex-1 overflow-y-auto p-2">
+              {isLoading ? (
+                <div className="py-4 text-center text-sm text-[oklch(0.6_0.01_260)] animate-pulse">Đang tải dữ liệu...</div>
+              ) : error ? (
+                <div className="m-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">Không tải được dữ liệu.</div>
+              ) : domains.length === 0 ? (
+                <div className="py-4 text-center text-sm text-[oklch(0.5_0.01_260)]">Chưa có dữ liệu</div>
               ) : (
-                <button onClick={() => handleStarMail({message_id: currentMailHeader.message_id, is_starred: true})} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white "><Star className="w-4 h-4" /></button>
-              )}
-              <button onClick={() => handleDeleteMail({message_id: currentMailHeader.message_id, is_deleted: true})} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-red-400"><Trash2 className="w-4 h-4" /></button>
-            </div>
-
-            {/* Khung nội dung */}
-            <div className="p-3 pt-1 pb-0 flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-              <h1 className="text-xl font-bold text-white mb-4">Tiêu đề: {currentMailHeader.subject || "(Không có tiêu đề)"}</h1>
-
-              <div className="flex justify-between border-b border-[oklch(0.2_0.01_260)] pb-4 mb-4 text-sm">
-                <div>
-                  <div className="text-white font-medium flex justify-between gap-7 items-center">
-                      Từ: {currentMailHeader.email_from}
-                  </div>
-
-                  <div className="text-xs text-[oklch(0.5_0.01_260)] mt-0.5">Tới: {currentMailHeader.email_to || "me"}</div>
-                </div>
-                <div className="text-[oklch(0.5_0.01_260)] text-xs text-right">
-                  {currentMailHeader.received_at ? new Date(currentMailHeader.received_at).toLocaleString("vi-VN") : ""}
-                </div>
-              </div>
-
-              {/* KHU VỰC HIỂN THỊ NỘI DUNG HOẶC LOADING KHI ĐANG GIẢI MÃ CHI TIẾT */}
-              <div className="text-white text-sm leading-relaxed email-content mb-8 flex-1 w-full flex flex-col">
-                {isDecryptingBody ? (
-                  <div className="flex items-center gap-2 text-[oklch(0.5_0.01_260)] text-xs animate-pulse">
-                    🔒 Đang tải và giải mã nội dung bảo mật bằng khóa cấp 2...
-                  </div>
-                ) : activeBody ? (
-                  activeBody.html ? (
-                    // SỬA Ở ĐÂY: Thêm flex-1, w-full, và min-h-[65vh] (hoặc min-h-[500px])
-                    <div className="flex-1 w-full min-h-[77vh] overflow-hidden bg-white">
-                      <IframeEmailViewer htmlContent={activeBody.html} />
+                domains.map((domain) => (
+                  <div
+                    key={domain}
+                    onClick={() => handleSelectDomain(domain)}
+                    className={`mb-1 cursor-pointer rounded-lg p-3 transition-colors ${
+                      selectedDomain === domain
+                        ? 'bg-[oklch(0.28_0.03_255)] text-white shadow-[inset_0_0_0_1px_oklch(0.42_0.04_255)]'
+                        : 'hover:bg-[oklch(0.2_0.01_260)]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className={`truncate text-sm ${selectedDomain === domain ? 'font-semibold text-white' : 'font-medium'}`}>
+                          {domain}
+                        </div>
+                        <div className="text-xs text-[oklch(0.5_0.01_260)]">
+                          {domainGroups[domain].length} email
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    <p className="whitespace-pre-line">{activeBody.text}</p>
-                  )
-                ) : null}
-              </div>
-
+                  </div>
+                ))
+              )}
             </div>
           </div>
-        ) : (
-          <div className="flex h-full items-center justify-center text-[oklch(0.5_0.01_260)]">
-            Chọn một thư để xem nội dung chi tiết
+
+          {/* --- CỘT 2: DANH SÁCH EMAIL (HEADER) THEO DOMAIN --- */}
+          <div className="flex h-full min-w-[320px] flex-1 flex-col border-r border-[oklch(0.24_0.01_260)]">
+            <div className="border-b border-[oklch(0.24_0.01_260)] bg-[oklch(0.12_0.01_260)] p-4">
+              <div className="relative px-4 py-1 text-center">
+                <span className="font-medium tracking-wide text-[oklch(0.85_0.01_260)]">
+                  {selectedDomain ? `Email từ ${selectedDomain}` : 'Chọn một Domain'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex-1 divide-y divide-[oklch(0.2_0.01_260)] overflow-y-auto">
+              {!selectedDomain ? (
+                <div className="p-4 text-center text-sm text-[oklch(0.5_0.01_260)]">Vui lòng chọn domain ở cột bên trái.</div>
+              ) : emailsInSelectedDomain.length === 0 ? (
+                <div className="p-4 text-center text-sm text-[oklch(0.5_0.01_260)]">Không có email nào.</div>
+              ) : (
+                emailsInSelectedDomain.map((item) => (
+                  <div
+                    key={item.message_id}
+                    onClick={() => handleSelectMail(item.message_id)}
+                    className={`cursor-pointer p-3 transition-colors ${
+                      selectedMessageId === item.message_id
+                        ? item.is_read
+                          ? 'bg-[oklch(0.2_0.01_260)] text-white'
+                          : 'bg-[oklch(0.28_0.03_255)] text-white shadow-[inset_0_0_0_1px_oklch(0.42_0.04_255)]'
+                        : item.is_read
+                          ? 'hover:bg-[oklch(0.2_0.01_260)]'
+                          : 'bg-[oklch(0.28_0.03_255)] text-white shadow-[inset_0_0_0_1px_oklch(0.42_0.04_255)] hover:bg-[oklch(0.3_0.03_255)]'
+                    }`}
+                  >
+                    <div className="mb-1 flex items-start justify-between">
+                      <span className={`truncate pr-2 text-sm ${!item.is_read ? 'font-bold text-white' : ''}`}>
+                        {item.email_from?.split('<')[0].trim() || 'Ẩn danh'}
+                      </span>
+                      <span className="whitespace-nowrap text-xs text-[oklch(0.5_0.01_260)]">
+                        {item.received_at ? new Date(item.received_at).toLocaleDateString('vi-VN') : ''}
+                      </span>
+                    </div>
+                    <div className={`mb-1 truncate text-xs ${!item.is_read ? 'font-semibold text-[oklch(0.85_0.02_255)]' : ''}`}>
+                      {item.subject || '(Không có tiêu đề)'}
+                    </div>
+                    <div className="truncate text-xs text-[oklch(0.5_0.01_260)]">{item.snippet}</div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        )}
+        </div>
+
+        {/* --- CỘT 3: NỘI DUNG BODY --- */}
+        <div className="flex h-screen min-h-0 w-full min-w-0 flex-1 flex-col bg-[oklch(0.14_0.01_260)]">
+          {currentMailHeader ? (
+            <div className="flex h-full min-h-0 flex-col overflow-hidden">
+              <div className="flex items-center justify-center gap-2 border-b border-[oklch(0.24_0.01_260)] bg-[oklch(0.12_0.01_260)] p-4 text-[oklch(0.85_0.01_260)]">
+                Nội dung chi tiết thư
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 pt-1 pb-0">
+                <h1 className="mb-4 text-xl font-bold text-white">Tiêu đề: {currentMailHeader.subject || '(Không có tiêu đề)'}</h1>
+
+                <div className="mb-4 flex justify-between border-b border-[oklch(0.2_0.01_260)] pb-4 text-sm">
+                  <div>
+                    <div className="flex items-center justify-between gap-7 font-medium text-white">Từ: {currentMailHeader.email_from}</div>
+                    <div className="mt-0.5 text-xs text-[oklch(0.5_0.01_260)]">Tới: {currentMailHeader.email_to || 'me'}</div>
+                  </div>
+                  <div className="text-right text-xs text-[oklch(0.5_0.01_260)]">
+                    {currentMailHeader.received_at ? new Date(currentMailHeader.received_at).toLocaleString('vi-VN') : ''}
+                  </div>
+                </div>
+
+                <div className="email-content mb-8 flex w-full flex-1 flex-col text-sm leading-relaxed text-white">
+                  {isDecryptingBody ? (
+                    <div className="flex items-center gap-2 text-xs text-[oklch(0.5_0.01_260)] animate-pulse">
+                      Đang tải và giải mã nội dung bảo mật bằng khóa cấp 2...
+                    </div>
+                  ) : activeBody ? (
+                    activeBody.html ? (
+                      <div className="h-full min-h-125 w-full flex-1 overflow-hidden rounded-lg bg-white">
+                        <IframeEmailViewer htmlContent={activeBody.html} />
+                      </div>
+                    ) : (
+                      <p className="whitespace-pre-line">{activeBody.text}</p>
+                    )
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-full items-center justify-center text-[oklch(0.5_0.01_260)]">
+              {selectedDomain ? 'Chọn một thư để xem nội dung chi tiết' : 'Vui lòng chọn Domain và Thư để xem'}
+            </div>
+          )}
+        </div>
       </div>
     </div>
-  );
+  )
 }

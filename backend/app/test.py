@@ -39,22 +39,22 @@
 # print("Trạng thái phản hồi từ Server:", response.status_code)
 # print("Kết quả:", response.json())
 
-# import json
-# import os
-# import resend
+import json
+import os
+import resend
 
-# resend.api_key = "re_Ybfq6QQP_B9aobGZHDb3cisubVHTKZMxj"
+resend.api_key = "re_Ybfq6QQP_B9aobGZHDb3cisubVHTKZMxj"
 
-# params: resend.Emails.SendParams = {
-#     "from": "Acme <onboarding@resend.dev>",
-#     "to": ["nguyengiang21102005@gmail.com"],
-#     "subject": "hello world",
-#     "html": "<strong>it works!</strong>",
-# }
+params: resend.Emails.SendParams = {
+    "from": "Acme <onboarding@resend.dev>",
+    "to": ["nguyengiang21102005@gmail.com"],
+    "subject": "hello world",
+    "html": "<strong>it works!</strong>",
+}
 
-# email = resend.Emails.send(params)
+email = resend.Emails.send(params)
 
-# print(email)
+print(email)
 
 # def check_email_domain(v: str) -> str:
 #     if not (v.endswith("@gmail.com") or v.endswith("@mail.foryou")):

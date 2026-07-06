@@ -1,10 +1,10 @@
 // src/hooks/usePGPMail.ts
 import { useState, useEffect, useRef, startTransition } from "react";
 import * as openpgp from 'openpgp';
-import { decryptPGPText } from "../api/openpgp";
-import { type EmailItem } from "../api/mail";
+import { decryptPGPText } from "../../api/openpgp";
+import { type EmailItem } from "../../api/friends";
 
-type OmitEmailItem = EmailItem & { subject: string; snippet: string; domain: string};
+type OmitEmailItem = EmailItem & { subject: string; snippet: string; };
 
 export const useDecryptedHeaders = (rawEmails: any[], navigate: any) => {
   const [decryptedHeaders, setDecryptedHeaders] = useState<OmitEmailItem[]>([]);
@@ -54,4 +54,3 @@ export const useDecryptedHeaders = (rawEmails: any[], navigate: any) => {
 
   return { decryptedHeaders, setDecryptedHeaders };
 };
-

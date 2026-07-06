@@ -6,6 +6,8 @@ import json
 
 import sqlite3
 
+import app.models.email_group  # noqa: F401
+
 from googleapiclient.discovery import build
 from app.core.database import SessionLocal
 from app.api.v1.router import api_router

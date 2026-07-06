@@ -1,6 +1,6 @@
 // src/hooks/useMailActions.ts
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteEamil, starredEmail } from "../api/mail";
+import { deleteEamil, starredEmail, spamEmail } from "../api/mail";
 
 export const useMailActions = () => {
   const queryClient = useQueryClient();
@@ -12,6 +12,7 @@ export const useMailActions = () => {
       queryClient.invalidateQueries({ queryKey: ["inbox"] });
       queryClient.invalidateQueries({ queryKey: ["trash"] });
       queryClient.invalidateQueries({ queryKey: ["starred"] });
+      queryClient.invalidateQueries({ queryKey: ["spam"] });
     },
 
   });
@@ -22,11 +23,23 @@ export const useMailActions = () => {
       queryClient.invalidateQueries({ queryKey: ["inbox"] });
       queryClient.invalidateQueries({ queryKey: ["trash"] });
       queryClient.invalidateQueries({ queryKey: ["starred"] });
+      queryClient.invalidateQueries({ queryKey: ["spam"] });
+    }
+  })
+
+  const spamMutation = useMutation({
+    mutationFn: ({ id, is_spam }: { id: string; is_spam: boolean }) => spamEmail(id, is_spam),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      queryClient.invalidateQueries({ queryKey: ["trash"] });
+      queryClient.invalidateQueries({ queryKey: ["starred"] });
+      queryClient.invalidateQueries({ queryKey: ["spam"] });
     }
   });
 
   return {
     deleteMail: deleteMutation.mutateAsync,
     starMail: starMutation.mutateAsync,
+    spamMail : spamMutation.mutateAsync,
   };
 };

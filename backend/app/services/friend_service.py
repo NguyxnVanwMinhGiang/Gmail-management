@@ -1,6 +1,3 @@
-from ast import Continue
-import token
-
 from pydantic import EmailStr
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
@@ -66,14 +63,17 @@ class FriendService:
             if not user:
                 raise HTTPException(status_code=404, detail="Người dùng không tồn tại.")
             return user.id
-        
     
-        
+    def check_is_friend(self, db: Session, my_user_id: int, user_id_friend: int, email_from: str, friend_domain: str):
+        return self.friend_repository.check_is_friend(db, my_user_id, user_id_friend, email_from, friend_domain)
 
     # ===============================================Main Methods===============================================
     def send_friend_request(self, db: Session, token: str, friend_domain: EmailStr):
         try:
             token_payload = get_current_user(token)
+            if not token_payload:
+                raise HTTPException(status_code=401, detail="Token không hợp lệ")
+
             user_id: str = token_payload["user_id"]
             role = token_payload["role"]
             email_from = token_payload["email"]
@@ -82,13 +82,24 @@ class FriendService:
             self.checkEmailRq(email_from, friend_domain)
 
             my_user_id = self.get_user_id_from_token(db, user_id, role)
-            # print("check")
-            
-            if not token_payload:
-                raise HTTPException(status_code=401, detail="Token không hợp lệ")
-            
             user_id_friend = self.get_friend_id_by_email(db, friend_domain)
         
+            # --- LOGIC KIỂM TRA TRẠNG THÁI BẠN BÈ ---
+            # Tìm kiếm bản ghi theo cả 2 chiều: (A và B) HOẶC (B và A)
+            # Lưu ý: Thay 'FriendModel' bằng tên Class Model database thực tế của bạn
+            existing_friendship = self.check_is_friend(db, my_user_id, user_id_friend, email_from, friend_domain)
+
+            if existing_friendship:
+                if existing_friendship.status == 'accepted':
+                    raise HTTPException(status_code=400, detail="Hai người đã là bạn bè rồi, không thể gửi lại lời mời.")
+                
+                if existing_friendship.status == 'pending':
+                    raise HTTPException(status_code=400, detail="Lời mời kết bạn đã được gửi trước đó và đang chờ xác nhận.")
+                
+                if existing_friendship.status == 'blocked':
+                    raise HTTPException(status_code=403, detail="Không thể thực hiện hành động này.")
+            # ----------------------------------------
+
             public_key = self.get_public_key_by_email(db, email_from)
 
             self.friend_repository.send_friend_request(
@@ -96,7 +107,7 @@ class FriendService:
                 sender_id=my_user_id,
                 sender_domain=email_from,
                 sender_key=public_key,
-                receiver_id=user_id_friend,  # Sử dụng ID của người nhận đã tìm được
+                receiver_id=user_id_friend,
                 receiver_domain=str(friend_domain)
             )
             
@@ -120,12 +131,12 @@ class FriendService:
 
             my_user_id = self.get_user_id_from_token(db, user_id, role)
 
-            puplic_key = self.get_public_key_by_email(db, email_from)
+            public_key = self.get_public_key_by_email(db, email_from)
 
-            acton = self.friend_repository.accept_friend_request(
+            action = self.friend_repository.accept_friend_request(
                 db=db,
                 receiver_id=my_user_id,
-                receiver_key=puplic_key,
+                receiver_key=public_key,
                 friendship_id=friendship_id
             )
             return {
@@ -219,6 +230,7 @@ class FriendService:
             token_payload = get_current_user(token)
             user_id = token_payload["user_id"]
             role = token_payload["role"]
+            my_email = token_payload["email"]
 
             if not token_payload:
                 raise HTTPException(status_code=401, detail="Token không hợp lệ")
@@ -227,7 +239,8 @@ class FriendService:
 
             friend_requests = self.friend_repository.get_received_requests(
                 db=db,
-                user_id=my_user_id
+                user_id=my_user_id,
+                user_domain=my_email
             )
 
             return friend_requests
@@ -240,24 +253,19 @@ class FriendService:
             token_payload = get_current_user(token)
             user_id = token_payload["user_id"]
             role = token_payload["role"]
-
+            my_email = token_payload["email"] # Lấy domain của người gọi API
+            
             if not token_payload:
                 raise HTTPException(status_code=401, detail="Token không hợp lệ")
-
+                
             my_user_id = self.get_user_id_from_token(db, user_id, role)
-
+            
+            # Truyền thêm my_email vào repository
             friends_list = self.friend_repository.get_accepted_friends(
                 db=db,
-                user_id=my_user_id
-            )
-            friend_ids = []
-            for friend in friends_list:
-                if friend.user_id_1 == my_user_id:
-                    friend_ids.append(friend.user_id_2)
-                else:
-                    friend_ids.append(friend.user_id_1)
-                    
+                user_id=my_user_id,
+                user_domain=my_email 
+            )                             
             return friends_list
-
         except HTTPException as http_exc:
             raise http_exc

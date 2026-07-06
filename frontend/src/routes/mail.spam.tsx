@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react';
-import { Trash2, Search, Reply, Forward, Star } from "lucide-react";
+import { Search, Reply, Forward, Star, AlertOctagon,  } from "lucide-react";
 import IframeEmailViewer from "../components/mail/IframeRenderBodyMail";
 
 import { useDecryptedBody } from "../hooks/useDecryptedBody";
-import { useTrashQuery } from "../hooks/useInboxQuery";
+import { useSpamQuery } from "../hooks/useInboxQuery";
 import { useDecryptedHeaders } from "../hooks/useDecryptedHeaders";
 import { useMailActions } from "../hooks/useMailActions";
 
@@ -16,7 +16,7 @@ function Spam() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<number>(0);
 
-  const { rawEmails, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useTrashQuery();
+  const { rawEmails, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useSpamQuery();
 
   const { decryptedHeaders, setDecryptedHeaders } = useDecryptedHeaders(rawEmails, navigate);
   const currentMailHeader = decryptedHeaders[selected] ?? null;
@@ -25,7 +25,7 @@ function Spam() {
 
   const { activeBody, isDecryptingBody } = useDecryptedBody(currentMailKey);
 
-  const { deleteMail, starMail } = useMailActions();
+  const { deleteMail, starMail, spamMail } = useMailActions();
 
   const handleSelectMail = (index: number) => {
     setSelected(index);
@@ -37,6 +37,14 @@ function Spam() {
     await deleteMail({
       id: message_id,
       is_deleted,
+    });
+  }
+
+  const handleSpamMail = async (message_id: string, is_spam: boolean) => {
+    if (!currentRawMail) return;
+    await spamMail({
+      id: message_id,
+      is_spam
     });
   }
 
@@ -134,7 +142,7 @@ function Spam() {
               <button onClick={() => handleDeleteMail(currentMailHeader.message_id, false)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Reply className="w-4 h-4" /></button>
               <button className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white"><Forward className="w-4 h-4" /></button>
               <button onClick={() => handleStarMail(currentMailHeader.message_id, true)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-white "><Star className="w-4 h-4" /></button>
-              <button onClick={() => handleDeleteMail(currentMailHeader.message_id, true)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-red-400"><Trash2 className="w-4 h-4" /></button>
+              <button onClick={() => handleSpamMail(currentMailHeader.message_id, false)} className="p-1.5 hover:bg-[oklch(0.24_0.01_260)] rounded text-yellow-400"><AlertOctagon className="w-4 h-4" /></button>
             </div>
 
             {/* Khung nội dung */}

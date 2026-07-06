@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Trash2, Search, Reply, Forward, Star } from "lucide-react";
 import IframeEmailViewer from "../components/mail/IframeRenderBodyMail";
 import { useDecryptedBody } from "../hooks/useDecryptedBody";
-import { useTrashQuery } from "../hooks/useInboxQuery";
+import { useSentQuery } from "../hooks/useInboxQuery";
 import { useDecryptedHeaders } from "../hooks/useDecryptedHeaders";
 import { useMailActions } from "../hooks/useMailActions";
 
@@ -17,7 +17,7 @@ function Sent() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<number>(0);
 
-  const { rawEmails, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useTrashQuery();
+  const { rawEmails, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } = useSentQuery();
 
   const { decryptedHeaders, setDecryptedHeaders } = useDecryptedHeaders(rawEmails, navigate);
   const currentMailHeader = decryptedHeaders[selected] ?? null;

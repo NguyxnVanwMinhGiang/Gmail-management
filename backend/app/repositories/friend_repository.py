@@ -7,10 +7,6 @@ from app.models.users_gg import Users_gg
 from app.models.friends import Friend
 from app.models.friend_mail import FriendMails
 
-# Truy van tat ca du lieu tu bang Friend 
-def find_all_by_friendships_id(db: Session, friendship_id: int):
-    return db.query(FriendMails).filter(FriendMails.id == friendship_id).all()
-
 def send_friend_request(db: Session, sender_id: int, sender_domain: str, sender_key: str, receiver_id: int, receiver_domain: str):
     # Kiểm tra xem giữa 2 user đã có tương tác nào chưa (bất kể ai gửi trước)
     db.query(Friend).filter(
@@ -37,19 +33,12 @@ def send_friend_request(db: Session, sender_id: int, sender_domain: str, sender_
     return new_request
 
 def accept_friend_request(db: Session, receiver_id: int, receiver_key: str, friendship_id: int):
-    """
-    Bước 2: Người nhận (user_2) bấm chấp nhận lời mời.
-    Hệ thống cập nhật Public Key của người nhận và đổi trạng thái sang 'accepted'.
-    """
-    # Tìm đúng lời mời đang ở trạng thái pending và người nhận phải trùng với receiver_id
     friendship = db.query(Friend).filter(
         Friend.id == friendship_id,
-        Friend.user_id_2 == receiver_id, # Đảm bảo đúng người nhận mới có quyền đồng ý
+        Friend.user_id_2 == receiver_id,
         Friend.status == 'pending'
     ).first()
 
-
-    # Đối phương đồng ý -> Cập nhật Public Key của họ và chuyển trạng thái
     friendship.public_key_user_2 = receiver_key
     friendship.status = 'accepted'
     
@@ -109,7 +98,7 @@ def block_user(db: Session, current_user_id: int, target_user_id: int):
 
     return friendship
     
-def get_received_requests(db: Session, user_id: int):
+def get_received_requests(db: Session, user_id: int, user_domain: str):
     """
     Lấy danh sách lời mời kết bạn MÀ USER NHẬN ĐƯỢC (đang chờ duyệt)
     Tương ứng với việc user_id nằm ở cột user_id_2
@@ -118,6 +107,7 @@ def get_received_requests(db: Session, user_id: int):
         db.query(Friend)
         .filter(
             Friend.user_id_2 == user_id,
+            Friend.domain_user_2 == user_domain,
             Friend.status == "pending"
         )
         .all()
@@ -168,33 +158,56 @@ def check_friendship(db: Session, userId: int, receiver_id: int):
             and_(Friend.user_id_1 == receiver_id, Friend.user_id_2 == userId)
         )
     ).first()
+    return friendship
 
-def get_accepted_friends(db: Session, user_id: int):
+def get_accepted_friends(db: Session, user_id: int, user_domain: str):
     """
-    Lấy danh sách bạn bè (ID, Domain, Ngày kết bạn) đã accepted.
-    Sắp xếp: Ngày cũ lên đầu, ngày mới xuống dưới.
+    Lấy danh sách bạn bè đã accepted.
+    Dùng tổ hợp ID + Domain để chống trùng lặp chéo giữa các bảng User.
     """
-    # Query và dùng order_by để sắp xếp từ cũ đến mới
+    # 1. Query kiểm tra khắt khe cả ID và Domain
     records = db.query(Friend).filter(
         Friend.status == 'accepted',
-        or_(Friend.user_id_1 == user_id, Friend.user_id_2 == user_id)
-    ).order_by(Friend.created_at.asc()).all() # .asc() giúp đẩy ngày cũ lên đầu
+        or_(
+            and_(Friend.user_id_1 == user_id, Friend.domain_user_1 == user_domain),
+            and_(Friend.user_id_2 == user_id, Friend.domain_user_2 == user_domain)
+        )
+    ).order_by(Friend.created_at.asc()).all()
     
     friends_list = []
+    seen_friend_keys: set[str] = set() # Đổi sang lưu string thay vì int
+    
     for r in records:
-        # Nếu mình là user_1 -> bạn mình là user_2 và ngược lại
-        if r.user_id_1 == user_id:
-            friend_id = r.user_id_2
-            friend_domain = r.domain_user_2
-        else:
-            friend_id = r.user_id_1
-            friend_domain = r.domain_user_1
+        # 2. Xác định rõ ràng mình là ai trong mối quan hệ này
+        is_user_1 = (r.user_id_1 == user_id and r.domain_user_1 == user_domain)
+        
+        friend_id = r.user_id_2 if is_user_1 else r.user_id_1
+        friend_domain = r.domain_user_2 if is_user_1 else r.domain_user_1
+        
+        # 3. Chống trùng lặp bằng key ghép giữa ID và Domain
+        unique_key = f"{friend_id}_{friend_domain}"
+        if unique_key in seen_friend_keys:
+            continue
             
+        seen_friend_keys.add(unique_key)
+        
         friends_list.append({
             "friend_id": friend_id,
             "domain": friend_domain,
             "created_at": r.created_at.strftime("%Y-%m-%d %H:%M:%S") if r.created_at else None
-            # Dùng strftime để format lại ngày tháng cho đẹp nếu cần, hoặc giữ nguyên object datetime
         })
         
     return friends_list
+
+def check_is_friend(db: Session, my_user_id: int, user_id_friend: int, email_from: str, friend_domain: str):
+    existing_friendship = db.query(Friend).filter(
+        # Chiều 1: Mình là người gửi (1), Họ là người nhận (2)
+        ((Friend.user_id_1 == my_user_id) & (Friend.domain_user_1 == email_from) & 
+            (Friend.user_id_2 == user_id_friend) & (Friend.domain_user_2 == friend_domain)) |
+        
+        # Chiều 2: Họ là người gửi (1), Mình là người nhận (2)
+        ((Friend.user_id_1 == user_id_friend) & (Friend.domain_user_1 == friend_domain) & 
+            (Friend.user_id_2 == my_user_id) & (Friend.domain_user_2 == email_from))
+    ).first()
+
+    return existing_friendship

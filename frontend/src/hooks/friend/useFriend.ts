@@ -1,22 +1,24 @@
-import { listFriendRequest, acpFriend, rejectFriend, listFriend } from "../api/friends";
+import { listFriendRequest, acpFriend, rejectFriend, listFriend } from "../../api/friends";
 import { useEffect, useState, useCallback } from 'react';
 
 export interface FriendRequest {
-  friendship_id: number;
-  sender_domain: string;
-  status: string;
-  created_at: string;
+    friendship_id: number;
+    sender_domain: string;
+    status: string;
+    created_at: string;
 }
 
 interface FriendItem {
-  friend_id: number;
-  domain: string;
-  created_at: string;
+    friend_id: number;
+    domain: string;
+    created_at: string;
 }
 
 export const useFriendRequests = () => {
     const [requests, setRequests] = useState<FriendRequest[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
+    const [loadingFriendRequests, setLoadingFriendRequests] = useState<boolean>(true);
+    const [loadFriendList, setLoadFriendList] = useState<boolean>(true);
+
     const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [friends, setFriends] = useState<FriendItem[]>([]);
@@ -24,15 +26,15 @@ export const useFriendRequests = () => {
     // Dùng useCallback để hàm không bị tạo lại sau mỗi lần render
     const loadRequests = useCallback(async () => {
         try {
-        setLoading(true);
-        setError(null);
-        const res = await listFriendRequest();
-        
-        setRequests(res.data); 
+            setLoadingFriendRequests(true);
+            setError(null);
+            const res = await listFriendRequest();
+
+            setRequests(res.data);
         } catch (err: any) {
-        setError(err.message || 'Không thể tải danh sách lời mời kết bạn.');
+            setError(err.message || 'Không thể tải danh sách lời mời kết bạn.');
         } finally {
-        setLoading(false);
+            setLoadingFriendRequests(false);
         }
     }, []);
 
@@ -87,7 +89,7 @@ export const useFriendRequests = () => {
 
     const loadListFriend = async () => {
         try {
-            setLoading(true);
+            setLoadFriendList(true);
             setError(null);
 
             const res = await listFriend();
@@ -99,7 +101,7 @@ export const useFriendRequests = () => {
             console.error(err);
             setError("Không thể tải danh sách bạn bè.");
         } finally {
-            setLoading(false);
+            setLoadFriendList(false);
         }
     };
 
@@ -107,10 +109,11 @@ export const useFriendRequests = () => {
         loadListFriend();
     }, []);
 
-    return { 
-        requests, 
-        loading, 
-        error, 
+    return {
+        requests,
+        loadingFriendRequests,
+        loadFriendList,
+        error,
         actionLoadingId,
         friends,
         acceptRequest,

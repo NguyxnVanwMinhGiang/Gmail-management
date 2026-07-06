@@ -3,6 +3,7 @@ import datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from app.models.email import Email
+from app.models.friend_mail import FriendMails
 
 def check_google_message_id(db: Session, user_id: int, message_id: str) -> bool:
     existing_email = db.query(Email).filter_by(user_id=user_id, message_id=message_id).first()
@@ -53,8 +54,9 @@ def add_email_to_database(
     return email_entry
 
 
-def get_email_data_by_user_id(db: Session, user_id: int, provider: str, skip: int, limit: int, is_deleted: bool, is_starred: bool):
+def get_email_data_by_user_id(db: Session, user_id: int, provider: str, skip: int, limit: int, is_deleted: bool, is_starred: bool, is_spam: bool):
     return db.query(
+        Email.id,
         Email.message_id,
         Email.subject, 
         Email.email_from, 
@@ -63,12 +65,14 @@ def get_email_data_by_user_id(db: Session, user_id: int, provider: str, skip: in
         Email.received_at, 
         Email.is_read, 
         Email.is_starred,
-        Email.is_deleted
+        Email.is_deleted,
+        Email.is_spam
     ).filter(
         Email.provider == provider,
         Email.user_id == user_id,
         Email.is_deleted == is_deleted,
-        Email.is_starred == is_starred
+        Email.is_starred == is_starred,
+        Email.is_spam == is_spam
     ).order_by(
         Email.received_at.desc()
     ).offset(
@@ -90,6 +94,31 @@ def get_body_email(db: Session, user_id: int, message_id: str , provider: str):
         db.refresh(email)  
 
     return email.body_text, email.body_html
+
+def get_sent_email(db: Session, user_id: int, skip: int, limit: int, my_email: str, provider: str):
+    return db.query(
+        Email.id,
+        Email.message_id,
+        Email.subject, 
+        Email.email_from, 
+        Email.email_to, 
+        Email.snippet, 
+        Email.sent_at, 
+        Email.is_read, 
+        Email.is_starred,
+        Email.is_deleted,
+        Email.is_spam
+    ).filter(
+        Email.user_id == user_id,
+        Email.provider == provider,
+        Email.email_from == my_email
+    ).order_by(
+        Email.sent_at.desc()
+    ).offset(
+        skip
+    ).limit(
+        limit
+    ).all()
 
 def count_email_by_userID(db: Session, user_id: int, provider: str) -> int:
     stmt = (
