@@ -13,7 +13,7 @@ A modern web application for managing Gmail accounts with a React frontend and F
 - TanStack React Router for routing
 
 ### Backend
-- FastAPI for REST API and WebSocket support
+- FastAPI for REST API
 - Python 3.14.4
 
 ---
