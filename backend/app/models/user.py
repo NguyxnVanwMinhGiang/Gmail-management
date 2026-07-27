@@ -14,7 +14,7 @@ class User(Base):
     role = Column(String(50), default="user4u")
 
     is_active = Column(Boolean, default=True)
-    is_verified = Column(Boolean, default=False)
+    vip = Column(Boolean, default=False)
 
     public_key = Column(Text, nullable=True)
     encrypted_private_key = Column(Text, nullable=True)

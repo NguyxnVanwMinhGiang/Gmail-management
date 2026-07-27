@@ -3,6 +3,7 @@ import { PencilLine } from 'lucide-react';
 import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useSendMail } from '../hooks/useSend';
 import { useFriendRequests } from '../hooks/friend/useFriend';
+import { useNotification } from '../contexts/notification';
 
 
 export const Route = createFileRoute('/mail/new')({
@@ -13,8 +14,12 @@ export const Route = createFileRoute('/mail/new')({
 function New() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
+  const { success: notifySuccess, error: notifyError } = useNotification();
   const { sendMail, loadingMail } = useSendMail();
-  const { friends, loadFriendList } = useFriendRequests();
+  const { friends, loadFriendList } = useFriendRequests({
+    enableRequests: false,
+    enableFriends: true,
+  });
   const [isFriendEmail, setIsFriendEmail] = useState(false);
   // State quản lý form dữ liệu text
   const [formData, setFormData] = useState({
@@ -46,12 +51,12 @@ function New() {
     });
 
     if (result.success) {
-      alert(isFriendEmail ? "Gửi email cho bạn bè thành công!" : "Gửi email thành công!");
+      notifySuccess(isFriendEmail ? "Gửi email cho bạn bè thành công!" : "Gửi email thành công!");
       setFormData({ to: "", subject: "", content: "" });
       setFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
     } else {
-      alert("Gửi mail thất bại!");
+      notifyError("Gửi mail thất bại!");
     }
   };
 

@@ -11,7 +11,10 @@ export const Route = createFileRoute('/mail/friends')({
 })
 
 function RouteComponent() {
-    const { friends, loadFriendList } = useFriendRequests();
+    const { friends, loadFriendList } = useFriendRequests({
+        enableRequests: false,
+        enableFriends: true,
+    });
     const navigate = useNavigate();
     const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
     const [selectedMailIndex, setSelectedMailIndex] = useState<number | null>(null);

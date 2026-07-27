@@ -3,34 +3,13 @@ import { Shield } from "lucide-react";
 import { useState } from "react";
 import Button from '@mui/material/Button';
 
+import { loginWithEmail } from "../api/auth";
+
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-
-interface LoginRequestAdmin {
-  email: string;
-  password: string;
-}
-
-async function loginAdmin(email: string, password: string): Promise<LoginRequestAdmin> {
-  const timelogin = new Date().toISOString();
-  const response = await fetch('http://127.0.0.1:8080/api/admin/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email, password, timelogin }),
-    headers: { 'Content-Type': 'application/json' },
-  });
-  console.log('Login response:', response);
-  if (!response.ok) throw new Error('Đăng nhập thất bại');
-
-  const data = await response.json();
-  
-  // Lưu token vào localStorage
-  localStorage.setItem('accessToken', data.accessToken);
-  
-  return data;
-}
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -42,8 +21,9 @@ function LoginPage() {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     try {
-      await loginAdmin(email, password);
-      navigate({ to: "/admin" });
+      await loginWithEmail(email, password);
+      
+      navigate({ to: "/admin/administrator" });
     } catch (error) {
       console.error("Login failed:", error);
       setError("Email hoặc mật khẩu không đúng.");
@@ -83,14 +63,14 @@ function LoginPage() {
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <h4 className="font-display text-14px font-bold">Email</h4>
-              <input id="email" name="email" type="email" required 
-              className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base focus-visible:outline-none"
+              <input id="email" name="email" type="email" required
+                className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base focus-visible:outline-none"
               />
             </div>
             <div>
               <h4 className="font-display text-14px font-bold">Mật khẩu</h4>
-              <input id="password" name="password" type="password" required minLength={6} 
-              className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base focus-visible:outline-none"
+              <input id="password" name="password" type="password" required minLength={6}
+                className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base focus-visible:outline-none"
               />
             </div >
             <div>
@@ -100,7 +80,7 @@ function LoginPage() {
                 </div>
               )}
             </div>
-            <Button className="w-full" type="submit" variant="contained" sx={{ backgroundColor: 'var(--primary)'}}
+            <Button className="w-full" type="submit" variant="contained" sx={{ backgroundColor: 'var(--primary)' }}
             >
               Đăng nhập
             </Button>

@@ -1,4 +1,4 @@
-import axios from "axios";
+import apiClient from "./apiClient";
 
 const FRIEND_API_URL = "http://127.0.0.1:8000/api/v1/friend";
 
@@ -30,7 +30,7 @@ export const addFriend = async (friend_domain: string) => {
   const data = new FormData();
   data.append("friend_domain", friend_domain);
 
-  const response = await axios.post(
+  const response = await apiClient.post(
     `${FRIEND_API_URL}/add`,
     data,
     {
@@ -45,7 +45,7 @@ export const addFriend = async (friend_domain: string) => {
 
 // listFriendRequest
 export const listFriendRequest = async () => {
-  const response = await axios.get<FriendRequestDto[]>(
+  const response = await apiClient.get<FriendRequestDto[]>(
     `${FRIEND_API_URL}/list-friend-requests`,
     {
       headers: getAuthHeaders(),
@@ -60,7 +60,7 @@ export const listFriendRequest = async () => {
 
 // acpFriend
 export const acpFriend = async (friendship_id: number) => {
-  const response = await axios.put<FriendActionResponse>(
+  const response = await apiClient.put<FriendActionResponse>(
     `${FRIEND_API_URL}/accept`,
     { friendship_id },
     {
@@ -75,7 +75,7 @@ export const acpFriend = async (friendship_id: number) => {
 };
 
 export const rejectFriend = async (friendship_id: number) => {
-  const response = await axios.delete<FriendActionResponse>(
+  const response = await apiClient.delete<FriendActionResponse>(
     `${FRIEND_API_URL}/reject`,
     {
       data: { friendship_id },
@@ -91,7 +91,7 @@ export const rejectFriend = async (friendship_id: number) => {
 
 // list
 export const listFriend = async () => {
-  const response = await axios.get<FriendActionResponse>(
+  const response = await apiClient.get<FriendActionResponse>(
     `${FRIEND_API_URL}/list`,
     {
       headers: getAuthHeaders(),
@@ -142,24 +142,6 @@ export type EmailSend = {
 }
 
 // METHOD GET
-export const asyncGmail = async (limit: number) => {
-  const token = localStorage.getItem("accessToken");
-
-  if (!token) {
-    throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
-  }
-
-  const response = await axios.get(`${FRIEND_API_URL}/gmail/sync-emails`, {
-    params: { limit },
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  return response.status + "message: success"
-
-}
-
 export const getInbox = async (friendId: number, page: number, limit: number): Promise<EmailItem[]> => {
   // Lấy hệ thống token bạn lưu lúc đăng nhập (ví dụ lưu trong localStorage)
   const token = localStorage.getItem("accessToken");
@@ -168,7 +150,7 @@ export const getInbox = async (friendId: number, page: number, limit: number): P
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.get(`${FRIEND_API_URL}/inbox`, {
+  const response = await apiClient.get(`${FRIEND_API_URL}/inbox`, {
     params: { friend_id: friendId, page, limit },
     headers: {
       Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
@@ -186,7 +168,7 @@ export const getSentMails = async (friendId: number, page: number, limit: number
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.get(`${FRIEND_API_URL}/sent`, {
+  const response = await apiClient.get(`${FRIEND_API_URL}/sent`, {
     params: { friend_id: friendId, page, limit },
     headers: {
       Authorization: `Bearer ${token}`,
@@ -205,7 +187,7 @@ export const getTrash = async (page: number, limit: number): Promise<EmailItem[]
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.get(`${FRIEND_API_URL}/friend/deleted`, {
+  const response = await apiClient.get(`${FRIEND_API_URL}/friend/deleted`, {
     params: { page, limit },
     headers: {
       Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
@@ -224,7 +206,7 @@ export const getBody = async (message_id: string, friendId: number): Promise<Ema
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.get(`${FRIEND_API_URL}/id/${message_id}`, {
+  const response = await apiClient.get(`${FRIEND_API_URL}/id/${message_id}`, {
     params: { friend_id: friendId },
     headers: {
       Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
@@ -244,7 +226,7 @@ export const deleteEamil = async (message_id: string, is_deleted: boolean) => {
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.post(
+  const response = await apiClient.post(
     `${FRIEND_API_URL}/gmail/id/${message_id}/delete`, {},
     {
       params: { is_deleted },
@@ -266,7 +248,7 @@ export const deleteEamilDB = async (message_id: string) => {
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.post(
+  const response = await apiClient.post(
     `${FRIEND_API_URL}/gmail/id/${message_id}/permanently-delete`,
     {}, // body rỗng
     {

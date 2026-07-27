@@ -12,7 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminUserRouteImport } from './routes/admin.user'
+import { Route as AdminOrderRouteImport } from './routes/admin.order'
+import { Route as AdminGoogleUserRouteImport } from './routes/admin.google-user'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as AdminCheckdomainRouteImport } from './routes/admin.checkdomain'
 import { Route as AdminAdministratorRouteImport } from './routes/admin.administrator'
 
 const LoginRoute = LoginRouteImport.update({
@@ -30,9 +34,29 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminUserRoute = AdminUserRouteImport.update({
+  id: '/user',
+  path: '/user',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOrderRoute = AdminOrderRouteImport.update({
+  id: '/order',
+  path: '/order',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminGoogleUserRoute = AdminGoogleUserRouteImport.update({
+  id: '/google-user',
+  path: '/google-user',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCheckdomainRoute = AdminCheckdomainRouteImport.update({
+  id: '/checkdomain',
+  path: '/checkdomain',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminAdministratorRoute = AdminAdministratorRouteImport.update({
@@ -46,14 +70,22 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/administrator': typeof AdminAdministratorRoute
+  '/admin/checkdomain': typeof AdminCheckdomainRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/google-user': typeof AdminGoogleUserRoute
+  '/admin/order': typeof AdminOrderRoute
+  '/admin/user': typeof AdminUserRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/administrator': typeof AdminAdministratorRoute
+  '/admin/checkdomain': typeof AdminCheckdomainRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/google-user': typeof AdminGoogleUserRoute
+  '/admin/order': typeof AdminOrderRoute
+  '/admin/user': typeof AdminUserRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,7 +93,11 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/administrator': typeof AdminAdministratorRoute
+  '/admin/checkdomain': typeof AdminCheckdomainRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/google-user': typeof AdminGoogleUserRoute
+  '/admin/order': typeof AdminOrderRoute
+  '/admin/user': typeof AdminUserRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -70,16 +106,33 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/admin/administrator'
+    | '/admin/checkdomain'
     | '/admin/dashboard'
+    | '/admin/google-user'
+    | '/admin/order'
+    | '/admin/user'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/login' | '/admin/administrator' | '/admin/dashboard'
+  to:
+    | '/'
+    | '/admin'
+    | '/login'
+    | '/admin/administrator'
+    | '/admin/checkdomain'
+    | '/admin/dashboard'
+    | '/admin/google-user'
+    | '/admin/order'
+    | '/admin/user'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/login'
     | '/admin/administrator'
+    | '/admin/checkdomain'
     | '/admin/dashboard'
+    | '/admin/google-user'
+    | '/admin/order'
+    | '/admin/user'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -111,11 +164,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/user': {
+      id: '/admin/user'
+      path: '/user'
+      fullPath: '/admin/user'
+      preLoaderRoute: typeof AdminUserRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/order': {
+      id: '/admin/order'
+      path: '/order'
+      fullPath: '/admin/order'
+      preLoaderRoute: typeof AdminOrderRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/google-user': {
+      id: '/admin/google-user'
+      path: '/google-user'
+      fullPath: '/admin/google-user'
+      preLoaderRoute: typeof AdminGoogleUserRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/dashboard': {
       id: '/admin/dashboard'
       path: '/dashboard'
       fullPath: '/admin/dashboard'
       preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/checkdomain': {
+      id: '/admin/checkdomain'
+      path: '/checkdomain'
+      fullPath: '/admin/checkdomain'
+      preLoaderRoute: typeof AdminCheckdomainRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/administrator': {
@@ -130,12 +211,20 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminAdministratorRoute: typeof AdminAdministratorRoute
+  AdminCheckdomainRoute: typeof AdminCheckdomainRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminGoogleUserRoute: typeof AdminGoogleUserRoute
+  AdminOrderRoute: typeof AdminOrderRoute
+  AdminUserRoute: typeof AdminUserRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAdministratorRoute: AdminAdministratorRoute,
+  AdminCheckdomainRoute: AdminCheckdomainRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminGoogleUserRoute: AdminGoogleUserRoute,
+  AdminOrderRoute: AdminOrderRoute,
+  AdminUserRoute: AdminUserRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

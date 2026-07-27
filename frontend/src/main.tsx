@@ -6,6 +6,7 @@ import "./index.css"
 // Import the generated route tree
 import { routeTree } from './routeTree.gen'
 import { GoogleOAuthProvider } from '@react-oauth/google'
+import { NotificationProvider } from './contexts/notification'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 // Create a new router instance
@@ -28,7 +29,9 @@ if (!rootElement.innerHTML) {
   root.render(
     <QueryClientProvider client={queryClient}>
       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-        <RouterProvider router={router} />
+        <NotificationProvider>
+          <RouterProvider router={router} />
+        </NotificationProvider>
       </GoogleOAuthProvider>
     </QueryClientProvider>,
   )

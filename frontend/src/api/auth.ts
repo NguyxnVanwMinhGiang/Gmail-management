@@ -1,4 +1,4 @@
-import axios from "axios";
+import apiClient from "./apiClient";
 
 const API_BASE_URL = "http://localhost:8000";
 const API_GOOGLE = "https://mail.google.com/"
@@ -32,7 +32,7 @@ interface BackendAuthResponse {
 
 export async function getCurrentUser(token: string): Promise<UserInfo> {
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/auth/me`, {
+    const response = await apiClient.get(`${API_BASE_URL}/api/v1/auth/me`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -51,7 +51,7 @@ export async function getCurrentUser(token: string): Promise<UserInfo> {
 
 async function loginWithEmail(email: string, password: string): Promise<AuthResponse> {
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/v1/auth/login`, {
+    const response = await apiClient.post(`${API_BASE_URL}/api/v1/auth/login`, {
       email,
       password,
     });
@@ -70,7 +70,7 @@ async function loginWithEmail(email: string, password: string): Promise<AuthResp
 
 async function registerWithEmail(fullName: string, email: string, password: string): Promise<AuthResponse> {
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/v1/auth/register`, {
+    const response = await apiClient.post(`${API_BASE_URL}/api/v1/auth/register`, {
       full_name: fullName,
       email,
       password,

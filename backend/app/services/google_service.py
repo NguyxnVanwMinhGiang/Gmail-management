@@ -20,12 +20,13 @@ class GmailService:
     def fetch_and_save_emails(self, db: Session, token: str, max_results: int):
         # 1. Lấy và bóc tách thông tin từ Token
         token_payload = get_current_user(token)
+        user_id = token_payload["user_id"]
 
         if not token_payload:
             raise HTTPException(status_code=401, detail="Token không hợp lệ")
 
         # 2. Tìm user trong DB
-        user_gg = find_by_google_id(db, token_payload)
+        user_gg = find_by_google_id(db, user_id)
 
         if user_gg is None:
             raise HTTPException(
@@ -172,14 +173,12 @@ class GmailService:
         my_email = token_payload["email"]
         
         if role_user == "user":
-            provider = "google"
             user = find_by_google_id(db, id_user)
-            data = get_sent_email(db, user.id, skip=skip, limit=limit, my_email=my_email, provider=provider)
+            data = get_sent_email(db, user.id, skip=skip, limit=limit, my_email=my_email)
             
         else:
-            provider = "user4u"
             user = find_id_4u(db, id_user)
-            data = get_sent_email(db, user.id, skip=skip, limit=limit, my_email=my_email, provider=provider)
+            data = get_sent_email(db, user.id, skip=skip, limit=limit, my_email=my_email)
         
         if not data:
             return {"message": "Không có email nào trong hòm thư.", "data": []}
@@ -195,6 +194,7 @@ class GmailService:
                 "snippet": email_data.snippet,
                 "received_at": email_data.received_at,
                 "is_read": email_data.is_read,
+                
                 "is_starred": email_data.is_starred,
                 "is_deleted": email_data.is_deleted,
                 "is_spam": email_data.is_spam
@@ -217,13 +217,13 @@ class GmailService:
             if not user:
                 raise HTTPException(status_code=401, detail="Token không hợp lệ")
             
-            email_content = get_body_email(db, user.id, message_id, provider="google")
+            email_content = get_body_email(db, user.id, message_id)
         else:
             user = find_id_4u(db, id_user)
             if not user:
                 raise HTTPException(status_code=401, detail="Token không hợp lệ")
 
-            email_content = get_body_email(db, user.id, message_id, provider="user4u")
+            email_content = get_body_email(db, user.id, message_id)
         
         if email_content is None:
             raise HTTPException(status_code=404, detail="Không tìm thấy email với ID đã cho.")
@@ -242,13 +242,14 @@ class GmailService:
         
         id_user = token_payload["user_id"]
         role_user = token_payload["role"]
+        my_email = token_payload["email"]
         
         if role_user == "user":
             user = find_by_google_id(db, id_user)
-            data_response = get_email_data_by_user_id(db, user.id, provider="google", skip=skip, limit=limit, is_deleted=is_deleted, is_starred=is_starred, is_spam=is_spam)
+            data_response = get_email_data_by_user_id(db, user.id, provider="google", my_email=my_email, skip=skip, limit=limit, is_deleted=is_deleted, is_starred=is_starred, is_spam=is_spam)
         else:
             user = find_id_4u(db, id_user)
-            data_response = get_email_data_by_user_id(db, user.id, provider="user4u", skip=skip, limit=limit, is_deleted=is_deleted, is_starred=is_starred, is_spam=is_spam)
+            data_response = get_email_data_by_user_id(db, user.id, provider="user4u", my_email=my_email, skip=skip, limit=limit, is_deleted=is_deleted, is_starred=is_starred, is_spam=is_spam)
         
 
         if not data_response:

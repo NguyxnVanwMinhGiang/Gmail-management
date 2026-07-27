@@ -17,7 +17,6 @@ class Admin(Base):
     is_verified = Column(Boolean, default=False) 
     is_active = Column(Boolean, default=True)
     is_2fa_enabled = Column(Boolean, default=False) #Kích hoạt xác thực hai yếu tố (2FA)
-    two_factor_secret = Column(TEXT) #tạo ra các mã OTP (One-Time Password) 
 
     failed_login_attempts = Column(Integer, default=0)
     locked_until = Column(DateTime)

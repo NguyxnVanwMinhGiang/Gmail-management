@@ -1,14 +1,16 @@
 from typing import List
-from fastapi import APIRouter, Depends, File, Header, Path, Query, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Header, Path, Query, Form, Request, UploadFile
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.services.sendMail_service import SendMailService
-
+from app.middlewares.rate_limit_middleware import limiter
 router = APIRouter()
 
 # send email
 @router.post("/send")
+@limiter.limit("10/second")
 def send_email(
+    request: Request,
     token: str = Header(..., alias="Authorization"),
     db: Session = Depends(get_db),
 
@@ -30,7 +32,9 @@ def send_email(
     )
 
 @router.post("/send_friend")
+@limiter.limit("10/second")
 def send_email_friend(
+    request: Request,
     token: str = Header(..., alias="Authorization"),
     db: Session = Depends(get_db),
 

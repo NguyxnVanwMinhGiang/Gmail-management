@@ -5,8 +5,10 @@ import { Fragment, useState } from 'react';
 
 import { addFriend } from '../api/friends';
 import Tooltip from '@mui/material/Tooltip';
+import { useNotification } from '../contexts/notification';
 
 export default function NewFriendPopup() {
+  const { error: notifyError, success: notifySuccess } = useNotification();
   const [isOpen, setIsOpen] = useState(false);
   const [isAgree, setIsAgree] = useState(false);
   const [formData, setFormData] = useState({
@@ -16,7 +18,7 @@ export default function NewFriendPopup() {
 
   const handleAddFriend = async () => {
     if (!isAgree) {
-      alert("Vui lòng đồng ý với điều khoản.");
+      notifyError("Vui lòng đồng ý với điều khoản.");
       return;
     }
 
@@ -30,7 +32,7 @@ export default function NewFriendPopup() {
       });
 
     } catch (err: any) {
-      alert(err.response?.data?.detail || "Có lỗi xảy ra");
+      notifyError(err.response?.data?.detail || "Có lỗi xảy ra");
     }
   };
 
@@ -207,7 +209,7 @@ export default function NewFriendPopup() {
                       type="button"
                       disabled={!isAgree}
                       onClick={() => {
-                        alert("Đã xác nhận!");
+                        notifySuccess("Đã xác nhận!");
                         handleAddFriend();
                         setIsAgree(false);
                         setIsOpen(false);

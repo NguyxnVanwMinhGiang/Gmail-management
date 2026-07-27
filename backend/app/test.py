@@ -1,65 +1,65 @@
-# import smtplib
+import hashlib
+import hmac
+import urllib.parse
+from datetime import datetime
 
-# sender = "nguoila@gmail.com"
-# receiver = "ban@mailfor.you"
-# message = """\
-# Subject: Chào buổi sáng
+def generate_vnpay_url(tmn_code, hash_secret, payment_url, return_url, txnp_ref, amount, order_info, ip_address):
+    vnp_params = {
+        "vnp_Version": "2.1.0",
+        "vnp_Command": "pay",
+        "vnp_TmnCode": tmn_code,
+        "vnp_Amount": str(int(amount) * 100),
+        "vnp_CreateDate": datetime.now().strftime("%Y%m%d%H%M%S"),
+        "vnp_CurrCode": "VND",
+        "vnp_IpAddr": ip_address,
+        "vnp_Locale": "vn",
+        "vnp_OrderInfo": order_info,
+        "vnp_OrderType": "other",
+        "vnp_ReturnUrl": return_url,
+        "vnp_TxnRef": str(txnp_ref),
+    }
 
-# Đây là một email test gửi từ Python gửi thẳng vào SMTP server của bạn!"""
+    sorted_params = sorted(vnp_params.items())
 
-# with smtplib.SMTP("localhost", 1025) as server:
-#     server.sendmail(sender, receiver, message.encode('utf-8'))
-#     print("Đã gửi test thành công!")
+    hash_data = "&".join([f"{k}={urllib.parse.quote_plus(v)}" for k, v in sorted_params])
 
+    secure_hash = hmac.new(
+        hash_secret.encode('utf-8'),
+        hash_data.encode('utf-8'),
+        hashlib.sha512
+    ).hexdigest()
 
+    # 5. Xây dựng URL thanh toán cuối cùng bằng cách nối secure_hash vào
+    query_string = "&".join([f"{k}={urllib.parse.quote_plus(v)}" for k, v in sorted_params])
+    final_url = f"{payment_url}?{query_string}&vnp_SecureHash={secure_hash}"
+    
+    return final_url
 
-# Server gia lap
-# import requests
+if __name__ == "__main__":
+    # Các thông tin giả định cấu hình Sandbox
+    VNP_TMN_CODE = "Y6TTY1HS"  # Thay bằng mã thật nhận từ VNPay Developer
+    VNP_HASH_SECRET = "VFW140T0MSOP45HJNZQHBX0S67ZHZ9AM"  # Thay bằng chuỗi mã hóa thật
+    VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+    VNP_RETURN_URL = "http://localhost:8000/payment-result"
+    VNP_IPN_URL = "https://rummage-protegee-smock.ngrok-free.dev/payment/ipn"
 
-# # ⚠️ THAY URL NÀY BẰNG URL NGROK CỦA BẠN
-# NGROK_URL = "https://a1b2-c3d4-e5f6.ngrok-free.app" 
+    # Thông tin đơn hàng test
+    order_id = "ORDER_2026_001"
+    money = 50000  # 50,000 VND
+    description = "Thanh toan don hang trai nghiem"
+    client_ip = "127.0.0.1"
 
-# # Nội dung email dạng chuỗi thô (Raw) giống hệt cấu trúc mail thật
-# raw_email_content = """Subject: Test email qua ngrok tunnel
-# From: khachhang@gmail.com
-# To: admin@mailfor.you
-
-# Xin chào, đây là nội dung email được bắn xuyên qua ngrok đi thẳng vào DB của bạn!"""
-
-# # Đóng gói JSON tương tự cấu trúc Cloudflare Worker sẽ gửi sau này
-# payload = {
-#     "sender": "khachhang@gmail.com",
-#     "recipient": "admin@mailfor.you",
-#     "raw_email": raw_email_content
-# }
-
-# # Tiến hành bắn HTTP POST đến cổng webhook của ngrok
-# response = requests.post(f"{NGROK_URL}/api/webhook/email", json=payload)
-
-# print("Trạng thái phản hồi từ Server:", response.status_code)
-# print("Kết quả:", response.json())
-
-import json
-import os
-import resend
-
-resend.api_key = "re_Ybfq6QQP_B9aobGZHDb3cisubVHTKZMxj"
-
-params: resend.Emails.SendParams = {
-    "from": "Acme <onboarding@resend.dev>",
-    "to": ["nguyengiang21102005@gmail.com"],
-    "subject": "hello world",
-    "html": "<strong>it works!</strong>",
-}
-
-email = resend.Emails.send(params)
-
-print(email)
-
-# def check_email_domain(v: str) -> str:
-#     if not (v.endswith("@gmail.com") or v.endswith("@mail.foryou")):
-#         raise HTTPException(
-#             status_code=400,
-#             detail="Email bắt buộc phải có đuôi @gmail.com hoặc @mail.foryou"
-#         )
-#     return v
+    payment_link = generate_vnpay_url(
+        tmn_code=VNP_TMN_CODE,
+        hash_secret=VNP_HASH_SECRET,
+        payment_url=VNP_URL,
+        return_url=VNP_RETURN_URL,
+        txnp_ref=order_id,
+        amount=money,
+        order_info=description,
+        ip_address=client_ip
+    )
+    
+    print("--- URL Thanh toán được tạo ---")
+    print(payment_link)
+    

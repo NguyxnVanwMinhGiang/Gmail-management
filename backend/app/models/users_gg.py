@@ -16,7 +16,7 @@ class Users_gg(Base):
 
     role = Column(String(50), default="user")
 
-    is_verified = Column(Boolean, default=False)
+    vip = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
     
     google_token_expires_at = Column(DateTime, nullable=True)

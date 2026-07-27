@@ -60,31 +60,50 @@ class AuthServiceUser:
         }
     
     
-
-
 class AuthServiceAdmin:
     def __init__(self):
         self.admin_repository = admin_repository
         
+    def login_admin(self, email: str, password: str, db: Session):
+        try: 
+            # check tai khoan co ton tai khong
+            print("1")
+            admin = self.admin_repository.find_admin_by_email(db, email)
+            if admin is None:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sai tai khoan hoac mat khau")
+            
+            # check mat khau co dung khong
+            if not verify_password(password, admin.password_hash):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sai tai khoan hoac mat khau")
+            
+            # check tai khoan co bi khoa khong
+            if not admin.is_active:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Tài khoản đã bị khóa")
+            
+            generate_token = generate_jwt_admin(admin.id, admin.email, admin.permissions)
 
-    def login_admin(self, data: LoginRequestAdmin, db: Session):
-        admin = self.admin_repository.find_by_email(db, data.email)
-        if not admin:    
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sai tai khoan hoac mat khau")
-        
-        if not verify_password(data.password, admin.password_hash):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sai tai khoan hoac mat khau")
-        
-        generate_token = generate_jwt_admin(admin.id, admin.email, admin.permissions)
-        
-        return {
-            "message": "Login successfully",
-            "accessToken": generate_token["token"],
-            "tokenType": "bearer"
-        }
+            return {
+                "message": "Login successfully",
+                "accessToken": generate_token["token"],
+                "tokenType": "bearer"
+            }
+        except HTTPException as http_exc:
+            raise http_exc
 
-    def register_admin(self, data: RegisterRequestAdmin, db: Session, token: str):
-        existing_admin = self.admin_repository.find_by_email(db, data.email)
+
+    def register_admin(self, db: Session, token: str, data: RegisterRequestAdmin):
+        token_payload = get_current_admin(token)
+        my_id = token_payload["admin_id"]
+        my_email = token_payload["email"]
+        my_role = token_payload["role"]
+        my_permissions = token_payload["permissions"].get("management", False)
+
+        if not token_payload:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+        if my_role != 'admin' or my_permissions != True:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        #  ktra email thien tai co trong danh sach admin khong
+        existing_admin = self.admin_repository.find_admin_by_email(db, data.email)
 
         if existing_admin:
             raise HTTPException(
@@ -102,7 +121,7 @@ class AuthServiceAdmin:
             password_hash=hashed_password,
             full_name=data.full_name,
             permissions=permissions,
-            created_by=get_current_admin(token=token)
+            created_by=my_id
         )
         return {
             "message": "Admin registered successfully",
@@ -141,6 +160,7 @@ class GoogleLoginService:
                 google_refresh_token=google_refresh_token,
                 google_token_expires_at=google_token_expires_at
             )
+        
         watchEmail(google_refresh_token)  # Gọi hàm watchEmail với refresh_token của người dùng
         system_jwt_token = generate_jwt_user(user.google_id, email, role)
 
@@ -177,7 +197,6 @@ class E2EEKeyService:
         else:
             try:
                 user = self.user_repository.find_id_4u(db, user_id)
-                print("User found:", user)  # Debugging line to check if the user is found
                 if not user:
                     raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
                     
@@ -190,7 +209,7 @@ class E2EEKeyService:
         return {"message": "Đã lưu bộ khóa E2EE an toàn."}
 
     def get_e2ee_keys(self, token: str, db: Session):
-        print("Token received for get_e2ee_keys:", token)  # Debugging line to check the token value
+
         token_payload = get_current_user(token)
 
         user_id = token_payload["user_id"]
@@ -244,8 +263,6 @@ class Me:
             total_emails = self.email_repository.count_email_by_userID(db, user.id, provider=user_role)
             total_starred = self.email_repository.count_starred_email_by_userID(db, user.id, provider=user_role)
             total_deleted = self.email_repository.count_deleted_email_by_userID(db, user.id, provider=user_role)
-
-        print(total_emails, total_starred, total_deleted, user.id)  # Debugging line to check the counts
         return {
             "email": user.email,
             "role": user_role,

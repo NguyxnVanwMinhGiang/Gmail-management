@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
-import { ChevronDown, ChevronRight, Mail, Inbox, Send, AlertOctagon, Trash2, Star } from 'lucide-react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { ChevronDown, ChevronRight, Mail, Inbox, Send, AlertOctagon, Trash2, Star, X, UserPen } from 'lucide-react'
+import { useDeleteGroup } from '../../hooks/useEmailGroups'
 
 interface AccountProps {
   email: string;
@@ -14,11 +15,21 @@ interface AccountProps {
 
 function Account({ email, totalEmails, totalStarred, totalDeleted, expanded, emailGroups = [], onCreateGroup }: AccountProps) {
   const [open, setOpen] = useState(!!expanded);
+  const navigate = useNavigate();
+  const deleteGroupMutation = useDeleteGroup();
+
+  const handleDeleteGroup = async (groupId: number, groupName: string) => {
+    const confirmed = window.confirm(`Xóa nhóm "${groupName}"?`);
+    if (!confirmed) return;
+
+    await deleteGroupMutation.mutateAsync(groupId);
+    await navigate({ to: '/mail/inbox' });
+  };
 
   const dynamicItems = [
     { icon: Inbox, label: "Hộp thư", count: totalEmails, to: "/mail/inbox" },
     { icon: Send, label: "Thư đã gửi", to: "/mail/sent" },
-    { icon: Send, label: "Thư từ bạn bè", to: "/mail/friends" },
+    { icon: UserPen, label: "Thư từ bạn bè", to: "/mail/friends" },
     { icon: AlertOctagon, label: "Thư rác", to: "/mail/spam" },
     { icon: Trash2, label: "Thùng rác", count: totalDeleted, to: "/mail/trash" },
     { icon: Star, label: "Quan trọng", count: totalStarred, to: "/mail/important", accent: "amber" },
@@ -59,10 +70,22 @@ function Account({ email, totalEmails, totalStarred, totalDeleted, expanded, ema
             <div className="mb-1 px-2 text-[11px] uppercase tracking-wide text-[oklch(0.55_0.01_260)]">Nhóm</div>
             <div className="space-y-0.5">
               {emailGroups.map((group) => (
-                <Link key={group.id} to="/mail/groups/$groupId" params={{ groupId: String(group.id) }} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-[oklch(0.22_0.01_260)]">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: group.color }} />
-                  <span className="truncate flex-1">{group.name}</span>
-                </Link>
+                <div key={group.id} className="group flex items-center gap-1 rounded px-2 py-1.5 text-sm hover:bg-[oklch(0.22_0.01_260)]">
+                  <Link to="/mail/groups/$groupId" params={{ groupId: String(group.id) }} className="flex min-w-0 flex-1 items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: group.color }} />
+                    <span className="truncate flex-1">{group.name}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteGroup(group.id, group.name)}
+                    disabled={deleteGroupMutation.isPending}
+                    className="rounded p-1 text-[oklch(0.55_0.01_260)] opacity-0 transition hover:bg-red-500/10 hover:text-red-300 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label={`Xóa nhóm ${group.name}`}
+                    title="Xóa nhóm"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               ))}
               <button onClick={onCreateGroup} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-[oklch(0.78_0.01_260)] hover:bg-[oklch(0.22_0.01_260)]">
                 + Tạo nhóm mới

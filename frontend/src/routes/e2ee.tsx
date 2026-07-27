@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, createFileRoute, redirect } from '@tanstack/react-router';
 import { PGPService } from "../api/openpgp"; // Đảm bảo đường dẫn đúng tới file openpgp.ts
+import { useNotification } from '../contexts/notification';
 
 export const Route = createFileRoute("/e2ee")({
   beforeLoad: () => {
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/e2ee")({
 
 function E2EESetup() {
   const navigate = useNavigate();
+  const { error: notifyError } = useNotification();
   const [loading, setLoading] = useState(true);
   const [hasKeys, setHasKeys] = useState(false);
   const [encryptedKeyFromServer, setEncryptedKeyFromServer] = useState("");
@@ -30,6 +32,7 @@ function E2EESetup() {
   useEffect(() => {
     if (!token) {
       setError("Không tìm thấy access token. Vui lòng đăng nhập lại.");
+      notifyError("Không tìm thấy access token. Vui lòng đăng nhập lại.");
       console.log("Access token is missing. User might not be logged in.");
       setLoading(false);
       return;
@@ -50,7 +53,11 @@ function E2EESetup() {
 
   // 2. Xử lý tạo khóa mới (Tài khoản mới đăng nhập lần đầu)
   const handleCreateKeys = async () => {
-    if (passphrase.length < 6) return setError("Mật khẩu cấp 2 phải có ít nhất 6 ký tự!");
+    if (passphrase.length < 6) {
+      setError("Mật khẩu cấp 2 phải có ít nhất 6 ký tự!");
+      notifyError("Mật khẩu cấp 2 phải có ít nhất 6 ký tự!");
+      return;
+    }
     setLoading(true);
     try {
       // Gọi generate (sẽ mất vài giây vì mã hóa tốn CPU)
@@ -76,6 +83,7 @@ function E2EESetup() {
       navigate({ to: "/mail/inbox" }); // Vào hòm thư
     } catch (e) {
       setError("Lỗi khởi tạo khóa");
+      notifyError("Lỗi khởi tạo khóa");
     }
     setLoading(false);
   };
@@ -92,6 +100,7 @@ function E2EESetup() {
       navigate({ to: "/mail/inbox" }); // Vào hòm thư
     } catch (e) {
       setError("Sai mật khẩu cấp 2! Vui lòng thử lại.");
+      notifyError("Sai mật khẩu cấp 2! Vui lòng thử lại.");
     }
     setLoading(false);
   };

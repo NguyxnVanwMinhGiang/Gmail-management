@@ -3,11 +3,17 @@ import json
 from sqlalchemy.orm import Session
 from app.models.admin import Admin
 
-def find_by_email(db: Session, email: str):
+def find_admin_by_email(db: Session, email: str):
     return db.query(Admin).filter(Admin.email == email).first()
+
+def find_by_email(db: Session, email: str):
+    return find_admin_by_email(db, email)
 
 def get_all_admin(db: Session): 
     return db.query(Admin).all()
+
+def list_admins(db: Session):
+    return get_all_admin(db)
 
 def get_admin_by_id(db: Session, admin_id: int):
     return db.query(Admin).filter(Admin.id == admin_id).first()
@@ -17,14 +23,14 @@ def create_admin(
     email: str,
     password_hash: str,
     full_name: str,
-    permissions: dict,
+    permissions: dict | None,
     created_by: int | None = None,
     ):
     admin = Admin(
         email=email,
         password_hash=password_hash,
         full_name=full_name,
-        permissions=permissions,
+        permissions=permissions or {},
         role="admin",
         created_by=created_by,
     )
@@ -38,8 +44,8 @@ def create_admin(
 def update_admin(
     db: Session,
     admin_id: int,
-    full_name: str,
-    email: str,
+    full_name: str | None,
+    email: str | None,
     permissions: dict | None = None,
     is_active: bool | None = None,
     is_verified: bool | None = None,

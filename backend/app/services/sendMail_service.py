@@ -12,8 +12,7 @@ from app.core.security import encrypt_with_pgp_public_key
 from app.utils.jwt_util import get_current_user
 from datetime import datetime
 from app.repositories import friend_repository, email_repository, google_repository, user_repository, friendMail_repository
-from app.services.resend_service import send_email_outbound
-
+from app.services.smtp_service import send_smtp_email
 
 class SendMailService:
     def __init__(self):
@@ -22,7 +21,7 @@ class SendMailService:
         self.google_repository = google_repository
         self.user_repository = user_repository
         self.friendMail_repository = friendMail_repository
-        self.send_email_outbound = send_email_outbound
+        self.send_smtp_email = send_smtp_email
 
     
     def send_email(self, db: Session, token: str,
@@ -57,15 +56,16 @@ class SendMailService:
                 
                 recipient_user = self.user_repository.find_email_4u(db, to)
                 if not recipient_user:
-                    self.send_email_outbound(
-                        from_email=email_from,
-                        to_email=to,
+                    self.send_smtp_email(
+                        email_from=email_from,
+                        email_to=to,
                         subject=subject,
-                        content=content,
+                        body=content,
+                        user_public_key=user_public_key,
                         user_id=sender_user.id,
-                        db=db,
+                        db=db
                     )
-                    return {"status": "success", "message": "Thư đã được bàn giao cho Resend đẩy đi!"}
+                    return {"status": "success", "message": "Thư đã được gửi thành công!"}
 
             else:
                 sender_user = self.user_repository.find_id_4u(db, user_id)
@@ -81,15 +81,16 @@ class SendMailService:
                 
                 recipient_user = self.google_repository.find_by_google_account(db, to)
                 if not recipient_user:
-                    self.send_email_outbound(
-                        from_email=email_from,
-                        to_email=to,
+                    self.send_smtp_email(
+                        email_from=email_from,
+                        email_to=to,
                         subject=subject,
-                        content=content,
+                        body=content,
+                        user_public_key=user_public_key,
                         user_id=sender_user.id,
-                        db=db,
+                        db=db
                     )
-                    return {"status": "success", "message": "Thư đã được bàn giao cho Resend đẩy đi!"}
+                    return {"status": "success", "message": "Thư đã được gửi thành công!"}
 
             if role_user == "user":
                 provider = "user4u"
@@ -129,7 +130,7 @@ class SendMailService:
                     json.dumps(file_data_list, ensure_ascii=False),
                     user_public_key
                 )
-
+    
             self.email_repository.add_email_to_database(
                 db=db,
                 user_id=user_id,

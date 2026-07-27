@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Trash2, Search, Reply, Forward, Star } from "lucide-react";
+import { Trash2, Search, Reply, Forward, Star, AlertOctagon } from "lucide-react";
 import { Tooltip } from "@mui/material";
 
 import IframeEmailViewer from "../components/mail/IframeRenderBodyMail";
@@ -9,8 +9,8 @@ import { useInboxQuery } from "../hooks/useInboxQuery";
 import { useDecryptedHeaders } from "../hooks/useDecryptedHeaders";
 import { useMailActions } from "../hooks/useMailActions";
 import GroupAssignMenu from "../components/mail/GroupAssignMenu";
-import { useToggleEmailInGroup } from "../hooks/useEmailGroups";
-import { useEmailGroupMembership } from "../hooks/useEmailGroupMembership";
+
+import { useEmailGroups } from "../hooks/useEmailGroups";
 
 export const Route = createFileRoute("/mail/inbox")({
   component: Index,
@@ -25,9 +25,9 @@ function Index() {
   const currentRawMail = rawEmails[selected] ?? null;
   const currentMailKey = currentRawMail ? String(currentRawMail.message_id) : null;
   const { activeBody, isDecryptingBody } = useDecryptedBody(currentMailKey);
-  const { deleteMail, starMail } = useMailActions();
-  const toggleGroupMutation = useToggleEmailInGroup();
-  const { groups, activeGroupIds } = useEmailGroupMembership(currentRawMail?.id);
+  const { deleteMail, starMail, spamMail } = useMailActions();
+
+  const { data: groups = [] } = useEmailGroups(); 
 
   const handleSelectMail = (index: number) => {
     setSelected(index);
@@ -42,6 +42,11 @@ function Index() {
   const handleStarMail = async (message_id: string, is_starred: boolean) => {
     if (!currentRawMail) return;
     await starMail({ id: message_id, is_starred });
+  };
+
+  const handleSpamMail = async (message_id: string, is_spam: boolean) => {
+    if (!currentRawMail) return;
+    await spamMail({ id: message_id, is_spam });
   };
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -74,27 +79,26 @@ function Index() {
           {decryptedHeaders.length === 0 ? (
             <div className="p-4 text-center text-sm text-[oklch(0.5_0.01_260)]">Không có thư nào trong hộp thư.</div>
           ) : (
-            decryptedHeaders.map((item, index) => (
-              <div key={item.message_id} onClick={() => handleSelectMail(index)} className={`cursor-pointer p-3 transition-colors ${selected === index ? "bg-[oklch(0.2_0.01_260)] text-white" : "hover:bg-[oklch(0.2_0.01_260)]"}`}>
-                <div className="mb-1 flex items-start justify-between gap-2">
-                  <span className={`truncate pr-2 text-sm ${!item.is_read ? "font-bold text-white" : ""}`}>{item.email_from?.split("<")[0].trim() || "Ẩn danh"}</span>
-                  <span className="whitespace-nowrap text-xs text-[oklch(0.5_0.01_260)]">{item.received_at ? new Date(item.received_at).toLocaleDateString("vi-VN") : ""}</span>
+            decryptedHeaders.map((item, index) => {
+              const correspondingRawMail = rawEmails[index];
+               return (
+                <div key={item.message_id} onClick={() => handleSelectMail(index)} className={`cursor-pointer p-3 transition-colors ${selected === index ? "bg-[oklch(0.2_0.01_260)] text-white" : "hover:bg-[oklch(0.2_0.01_260)]"}`}>
+                  <div className="mb-1 flex items-start justify-between gap-2">
+                    <span className={`truncate pr-2 text-sm ${!item.is_read ? "font-bold text-white" : ""}`}>{item.email_from?.split("<")[0].trim() || "Ẩn danh"}</span>
+                    <span className="whitespace-nowrap text-xs text-[oklch(0.5_0.01_260)]">{item.received_at ? new Date(item.received_at).toLocaleDateString("vi-VN") : ""}</span>
+                  </div>
+                  <div className={`mb-1 truncate text-xs ${!item.is_read ? "font-semibold text-[oklch(0.85_0.02_255)]" : ""}`}>{item.subject || "(Không có tiêu đề)"}</div>
+                  <div className="flex items-center justify-between gap-2 text-xs text-[oklch(0.5_0.01_260)]">
+                    <span className="truncate w-2/3">{item.snippet}</span>
+                    <GroupAssignMenu
+                      emailId={correspondingRawMail?.id}
+                      groups={groups}
+                      onCreateGroup={() => navigate({ to: "/mail" })}
+                    />
+                  </div>
                 </div>
-                <div className={`mb-1 truncate text-xs ${!item.is_read ? "font-semibold text-[oklch(0.85_0.02_255)]" : ""}`}>{item.subject || "(Không có tiêu đề)"}</div>
-                <div className="flex items-center justify-between gap-2 text-xs text-[oklch(0.5_0.01_260)]">
-                  <span className="truncate w-2/3">{item.snippet}</span>
-                  <GroupAssignMenu
-                    groups={groups}
-                    activeGroupIds={activeGroupIds}
-                    onToggle={async (groupId) => {
-                      if (!currentRawMail?.id) return;
-                      await toggleGroupMutation.mutateAsync({ groupId, emailId: currentRawMail.id });
-                    }}
-                    onCreateGroup={() => navigate({ to: "/mail" })}
-                  />
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
 
           {isFetchingNextPage && <div className="p-4 text-center text-sm text-[oklch(0.5_0.01_260)]">Đang tải thêm thư...</div>}
@@ -108,6 +112,7 @@ function Index() {
               <Tooltip title="Trả lời" arrow><button onClick={() => handleDeleteMail(currentMailHeader.message_id, true)} className="rounded p-1.5 text-white hover:bg-[oklch(0.24_0.01_260)]"><Reply className="h-4 w-4" /></button></Tooltip>
               <Tooltip title="Chuyển tiếp" arrow><button className="rounded p-1.5 text-white hover:bg-[oklch(0.24_0.01_260)]"><Forward className="h-4 w-4" /></button></Tooltip>
               <Tooltip title="Đánh dấu" arrow><button onClick={() => handleStarMail(currentMailHeader.message_id, true)} className="rounded p-1.5 text-white hover:bg-[oklch(0.24_0.01_260)]"><Star className="h-4 w-4" /></button></Tooltip>
+              <Tooltip title="Thư rác" arrow><button onClick={() => handleSpamMail(currentMailHeader.message_id, true)} className="rounded p-1.5 text-white hover:bg-[oklch(0.24_0.01_260)]"><AlertOctagon className="h-4 w-4" /></button></Tooltip>
               <Tooltip title="Xóa" arrow><button onClick={() => handleDeleteMail(currentMailHeader.message_id, true)} className="rounded p-1.5 text-red-400 hover:bg-[oklch(0.24_0.01_260)]"><Trash2 className="h-4 w-4" /></button></Tooltip>
             </div>
 

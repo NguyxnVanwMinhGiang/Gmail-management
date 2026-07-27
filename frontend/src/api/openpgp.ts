@@ -6,7 +6,7 @@ export const PGPService = {
   generateKeys: async (name: string, email: string, passphrase: string) => {
     const { privateKey, publicKey } = await openpgp.generateKey({
       type: 'ecc',
-      curve: 'ed25519' as openpgp.EllipticCurveName,      
+      curve: 'ed25519' as openpgp.EllipticCurveName,
       userIDs: [{ name, email }],
       passphrase, // Khóa Private Key
       format: 'armored'

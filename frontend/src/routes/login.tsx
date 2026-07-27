@@ -3,6 +3,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { Mail, Lock, User, X } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { loginWithEmail, registerWithEmail, sendCodeForBackend, API_GOOGLE } from "../api/auth";
+import { useNotification } from '../contexts/notification';
 
 
 export const Route = createFileRoute("/login")({
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { error: notifyError, success: notifySuccess } = useNotification();
   const [loading, setLoading] = useState<boolean>(false);
 
 
@@ -75,6 +77,7 @@ function LoginPage() {
 
       await registerWithEmail(fullName, email, password);
       setSuccessMessage("Đăng ký tài khoản thành công! Vui lòng đăng nhập.");
+      notifySuccess("Đăng ký tài khoản thành công! Vui lòng đăng nhập.");
       setIsLogin(true);
     } catch (err: any) {
       setError(err.message || "Có lỗi xảy ra, vui lòng thử lại");
@@ -97,12 +100,12 @@ function LoginPage() {
 
       } catch (error: any) {
         console.error("Lỗi đăng nhập:", error);
-        alert(error.message || "Có lỗi xảy ra trong quá trình xử lý đăng nhập.");
+        notifyError(error.message || "Có lỗi xảy ra trong quá trình xử lý đăng nhập.");
       } finally {
         setLoading(false);
       }
     } else {
-      alert("Không nhận được mã xác thực (Code) hợp lệ từ Google.");
+      notifyError("Không nhận được mã xác thực (Code) hợp lệ từ Google.");
     }
   };
 
@@ -112,7 +115,7 @@ function LoginPage() {
     onSuccess: handleLoginSuccess,
     onError: (errorResponse) => {
       console.error("Google Login Error:", errorResponse);
-      alert("Đăng nhập Google thất bại.");
+      notifyError("Đăng nhập Google thất bại.");
     }
   });
 

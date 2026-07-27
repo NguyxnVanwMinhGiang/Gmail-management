@@ -2,9 +2,14 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getInbox } from "../../api/friends";
 import { useMemo } from "react";
+import { useLocation } from "@tanstack/react-router";
 
 export const useInboxQuery = (friendId: number | null) => {
+  const location = useLocation();
+  const isAtInbox = location.pathname === "/mail/inbox";
+
   const query = useInfiniteQuery({
+    
     queryKey: ["friend-inbox", friendId],
     queryFn: ({ pageParam = 1 }) => getInbox(friendId as number, pageParam as number, 20),
     initialPageParam: 1,
@@ -15,7 +20,7 @@ export const useInboxQuery = (friendId: number | null) => {
     staleTime: 2000 * 60,
     retry: false,
     refetchOnWindowFocus: false,
-    enabled: friendId !== null,
+    enabled: isAtInbox,
   });
 
   // Gộp các page lại thành 1 mảng phẳng luôn cho tiện

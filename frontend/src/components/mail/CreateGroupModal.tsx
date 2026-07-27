@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { useNotification } from '../../contexts/notification'
 
 const COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#14b8a6"];
 
@@ -20,6 +21,7 @@ export default function CreateGroupModal({
   initialDescription?: string;
   title?: string;
 }) {
+  const { error: notifyError } = useNotification()
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
   const [color, setColor] = useState(initialColor);
@@ -40,6 +42,7 @@ export default function CreateGroupModal({
   const handleSubmit = async () => {
     if (!name.trim()) {
       setError("Vui lòng nhập tên nhóm");
+      notifyError("Vui lòng nhập tên nhóm");
       return;
     }
     setLoading(true);
@@ -48,7 +51,9 @@ export default function CreateGroupModal({
       await onSave({ name: name.trim(), description: description.trim() || undefined, color });
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể lưu nhóm");
+      const message = "đã đạt tối đa sô lượng nhóm";
+      setError(message);
+      notifyError(message);
     } finally {
       setLoading(false);
     }

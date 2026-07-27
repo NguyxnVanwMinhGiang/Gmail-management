@@ -1,7 +1,7 @@
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 
 import { Check, UserRound, Users, X } from 'lucide-react';
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useFriendRequests } from '../hooks/friend/useFriend';
 import { Tooltip } from '@mui/material';
 
@@ -23,7 +23,16 @@ const formatRequestTime = (createdAt: string) => {
 
 export default function FriendRequestPopup() {
   const [isOpen, setIsOpen] = useState(false);
-  const { requests, loadingFriendRequests, error, actionLoadingId, acceptRequest, rejectRequest } = useFriendRequests();
+  const { requests, loadingFriendRequests, errorRequests, acceptRequest, rejectRequest, refreshRequests } = useFriendRequests({
+    enableRequests: isOpen,
+    enableFriends: false,
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      void refreshRequests();
+    }
+  }, [isOpen, refreshRequests]);
 
   return (
     <div className="flex items-center justify-center">
@@ -84,20 +93,20 @@ export default function FriendRequestPopup() {
                         </div>
                       )}
 
-                      {!loadingFriendRequests && error && (
+                      {!loadingFriendRequests && errorRequests && (
                         <div className="rounded-lg border border-red-100 bg-red-50 p-4 text-sm text-red-600">
-                          {error}
+                          {errorRequests instanceof Error ? errorRequests.message : "Đã xảy ra lỗi khi tải lời mời kết bạn."}
                         </div>
                       )}
 
-                      {!loadingFriendRequests && !error && requests.length === 0 && (
+                      {!loadingFriendRequests && !errorRequests && requests.length === 0 && (
                         <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm text-gray-500">
                           Hiện chưa có lời mời kết bạn nào.
                         </div>
                       )}
 
                       {!loadingFriendRequests && requests.map((request) => {
-                        const isProcessing = actionLoadingId === request.friendship_id;
+                        const isProcessing = false;
 
                         return (
                           <div key={request.friendship_id} className="flex items-start gap-4 rounded-lg bg-gray-50 p-4 border border-gray-100">

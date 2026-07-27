@@ -1,4 +1,4 @@
-import axios from "axios";
+import apiClient from "./apiClient";
 
 // Định nghĩa kiểu dữ liệu trả về từ Backend tương ứng với Database của bạn
 export type EmailItem = {
@@ -48,7 +48,7 @@ export const asyncGmail = async (limit: number) => {
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.get(`${API_URL}/gmail/sync-emails`, {
+  const response = await apiClient.get(`${API_URL}/gmail/sync-emails`, {
     params: { limit },
     headers: {
       Authorization: `Bearer ${token}`,
@@ -68,7 +68,7 @@ export const getInbox = async (page: number, limit: number): Promise<EmailItem[]
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.get(`${API_URL}/gmail/inbox`, {
+  const response = await apiClient.get(`${API_URL}/gmail/inbox`, {
     params: { page, limit },
     headers: {
       Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
@@ -87,7 +87,7 @@ export const getTrash = async (page: number, limit: number): Promise<EmailItem[]
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.get(`${API_URL}/gmail/deleted`, {
+  const response = await apiClient.get(`${API_URL}/gmail/deleted`, {
     params: { page, limit },
     headers: {
       Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
@@ -106,7 +106,7 @@ export const getStarred = async (page: number, limit: number): Promise<EmailItem
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.get(`${API_URL}/gmail/starred`, {
+  const response = await apiClient.get(`${API_URL}/gmail/starred`, {
     params: { page, limit },
     headers: {
       Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
@@ -124,7 +124,7 @@ export const getSpams = async (page: number, limit: number): Promise<EmailItem[]
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.get(`${API_URL}/gmail/spam`, {
+  const response = await apiClient.get(`${API_URL}/gmail/spam`, {
     params: { page, limit },
     headers: {
       Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
@@ -142,7 +142,7 @@ export const getSent = async (page: number, limit: number): Promise<EmailItem[]>
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.get(`${API_URL}/gmail/sent`, {
+  const response = await apiClient.get(`${API_URL}/gmail/sent`, {
     params: { page, limit },
     headers: {
       Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
@@ -159,7 +159,7 @@ export const getBody = async (message_id: string): Promise<EmailBody> => {
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.get(`${API_URL}/gmail/id/${message_id}`, {
+  const response = await apiClient.get(`${API_URL}/gmail/id/${message_id}`, {
     headers: {
       Authorization: `Bearer ${token}`, // Truyền JWT token cho auth_middleware ở BE
     },
@@ -179,7 +179,7 @@ export const deleteEamil = async (message_id: string, is_deleted: boolean) => {
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.post(
+  const response = await apiClient.post(
     `${API_URL}/gmail/id/${message_id}/delete`, {},
     {
       params: { is_deleted },
@@ -201,7 +201,7 @@ export const deleteEamilDB = async (message_id: string) => {
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.post(
+  const response = await apiClient.post(
     `${API_URL}/gmail/id/${message_id}/permanently-delete`,
     {}, // body rỗng
     {
@@ -223,7 +223,7 @@ export const starredEmail = async (message_id: string, is_starred: boolean) => {
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.post(
+  const response = await apiClient.post(
     `${API_URL}/gmail/id/${message_id}/starred`, {},
     {
       params: { is_starred },
@@ -246,7 +246,7 @@ export const spamEmail = async (message_id: string, is_spam: boolean) => {
     throw new Error("Không tìm thấy Access Token. Vui lòng đăng nhập lại.");
   }
 
-  const response = await axios.post(
+  const response = await apiClient.post(
     `${API_URL}/gmail/id/${message_id}/spam`, {},
     {
       params: { is_spam },

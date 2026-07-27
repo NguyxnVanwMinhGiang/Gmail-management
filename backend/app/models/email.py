@@ -15,6 +15,7 @@ class Email(Base):
 
     provider = Column(String(50), nullable=False, default="google")
     message_id = Column(String(255), nullable=False)
+    gmail_history_id = Column(String(255), nullable=True)
 
     email_from = Column(Text, nullable=True)
     email_to = Column(Text, nullable=True)
