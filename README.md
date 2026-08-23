@@ -1,107 +1,148 @@
-# Email system e2ee
- 
-A modern web application for managing Gmail accounts with a React frontend and FastAPI backend.
+# Email-System-E2EE
+
+> Hệ thống web email mã hóa đầu-cuối (End-to-End Encryption) giúp gửi/nhận email an toàn với kiến trúc tách frontend và backend.
+
+![TypeScript](https://img.shields.io/badge/TypeScript-60%25-3178C6?logo=typescript&logoColor=white)
+![Python](https://img.shields.io/badge/Python-38.5%25-3776AB?logo=python&logoColor=white)
+![CSS](https://img.shields.io/badge/CSS-1.2%25-1572B6?logo=css3&logoColor=white)
 
 ---
 
-## Tech Stack
+## 1. Mô tả ngắn
 
-### Frontend
-- React 24.15.0 with TypeScript
-- Vite for build tooling
-- Tailwind CSS for styling
-- TanStack React Router for routing
+**Email-System-E2EE** là ứng dụng web tập trung vào bảo mật dữ liệu email.  
+Dự án sử dụng **TypeScript** cho phần frontend và **Python** cho backend/service logic.
 
-### Backend
-- FastAPI for REST API
-- Python 3.14.4
+### Tính năng chính
+- 🔐 Mã hóa đầu-cuối (E2EE) cho nội dung email.
+- 📩 Gửi/Nhận email an toàn giữa người dùng.
+- 👤 Quản lý tài khoản và xác thực phiên đăng nhập.
 
 ---
 
-## Prerequisites
+## 2. Tech Stack
 
-- Node.js 24+ or Bun
-- Python 3.14.4
+- **Frontend:** TypeScript, CSS
+- **Backend:** Python
+- **Bảo mật:** E2EE (mô hình mã hóa bất đối xứng/đối xứng tùy triển khai)
+- **Khác:** REST API, quản lý biến môi trường bằng `.env`
 
 ---
 
-## Getting Started
+## 3. Cấu trúc thư mục (Folder Structure)
 
-### Frontend Setup
+> Cập nhật theo cấu trúc phổ biến của dự án fullstack (hãy chỉnh lại nếu khác thực tế):
 
-#### Using npm:
+```bash
+Email-System-E2EE/
+├── frontend/                    # Ứng dụng frontend (TypeScript/CSS)
+│   ├── src/
+│   ├── public/
+│   └── package.json
+├── backend/                     # API + business logic (Python)
+│   ├── app/
+│   ├── main.py
+│   ├── requirements.txt
+│   └── .env.example
+├── .env.example                 # Biến môi trường tổng (nếu dùng chung)
+├── .gitignore
+└── README.md
+```
 
+---
+
+## 4. Cài đặt và chạy local
+
+## Yêu cầu
+- Node.js `>=18`
+- npm hoặc yarn
+- Python `>=3.10`
+- pip
+- Git
+
+## Bước 1: Clone repo
+```bash
+git clone https://github.com/NguyxnVanwMinhGiang/Email-System-E2EE.git
+cd Email-System-E2EE
+```
+
+## Bước 2: Cấu hình biến môi trường
+```bash
+cp .env.example .env
+```
+Sau đó chỉnh các giá trị cần thiết trong `.env`.
+
+## Bước 3: Chạy Backend (Python)
+```bash
+cd backend
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+
+# macOS/Linux
+source .venv/bin/activate
+
+pip install -r requirements.txt
+python main.py
+```
+
+## Bước 4: Chạy Frontend (TypeScript)
+Mở terminal mới:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-#### Using Bun:
+## Bước 5: Truy cập hệ thống
+- Frontend: `http://localhost:3000` (hoặc port theo cấu hình)
+- Backend: `http://localhost:8000` (hoặc port theo cấu hình)
 
-```bash
-cd frontend
-bun install
-bun run dev
-```
+---
 
-The frontend will be available at `http://127.0.0.1:8080`
+## 5. Biến môi trường (`.env.example`)
 
-### Installing TanStack React Router
+> Mẫu tham khảo:
 
-#### Using npm:
+```env
+# APP
+APP_NAME=Email-System-E2EE
+APP_ENV=development
+APP_PORT=8000
 
-```bash
-cd frontend
-npm install @tanstack/react-router
-```
+# FRONTEND
+FRONTEND_URL=http://localhost:3000
 
-#### Using Bun:
+# DATABASE
+DATABASE_URL=postgresql://user:password@localhost:5432/email_system
 
-```bash
-cd frontend
-bun add @tanstack/react-router
-```
+# AUTH
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRES_IN=7d
 
-### Backend Setup
+# E2EE
+E2EE_PUBLIC_KEY_PATH=./keys/public.pem
+E2EE_PRIVATE_KEY_PATH=./keys/private.pem
+E2EE_ALGORITHM=RSA-OAEP
 
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python main.py
+# SMTP (nếu có)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your_user
+SMTP_PASS=your_password
 ```
 
 ---
 
-## Project Structure
+## Lưu ý bảo mật
 
-```
-├── frontend/
-│   ├── src/
-│   ├── public/
-│   ├── package.json
-│   └── vite.config.ts
-├── backend/
-│   ├── app/
-│   ├── requirements.txt
-│   └── main.py
-└── README.md
-```
-
----
-
-## Features
-
-- Email management interface
-- Real-time updates with WebSocket
-- Responsive UI with Tailwind CSS
-- Type-safe frontend with TypeScript
-- RESTful API with FastAPI
+- Không commit `.env`, private key hoặc credentials lên Git.
+- Sử dụng secret manager cho production.
+- Bật HTTPS và cấu hình CORS phù hợp khi deploy.
 
 ---
 
 ## License
 
-MIT
+MIT (hoặc cập nhật theo license thực tế của dự án).
