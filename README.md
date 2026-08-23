@@ -1,5 +1,5 @@
-# Gmail Management
-
+# Email system e2ee
+ 
 A modern web application for managing Gmail accounts with a React frontend and FastAPI backend.
 
 ---
